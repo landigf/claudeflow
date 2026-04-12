@@ -1,0 +1,56 @@
+# Pipeline: self-audit
+# ClaudeFlow audits itself. The trace is stored as proof it works.
+#
+# Run: npx tsx examples/self-audit.ts
+
+name: claudeflow-self-audit
+description: ClaudeFlow uses itself to audit its own code quality
+version: "1.0.0"
+
+steps:
+  - id: read-structure
+    prompt: |
+      Read the project structure of this TypeScript project.
+      List all source files in src/ with a one-line description of each.
+      Note the test coverage: which src/ modules have corresponding test files.
+    output:
+      files:
+        type: array
+        items: string
+      modules_without_tests:
+        type: array
+        items: string
+
+  - id: check-quality
+    prompt: |
+      Review the code quality of this project. Check for:
+      1. Unused exports or dead code
+      2. Inconsistent naming patterns
+      3. Missing error handling
+      4. Type safety issues (any casts, missing types)
+      5. Files over 200 lines that should be split
+
+      Previous step found these files: {read-structure.files}
+
+      Rate each module A/B/C/D and list specific issues.
+    output:
+      grades:
+        type: array
+        items: string
+      issues:
+        type: array
+        items: string
+      overall_grade: string
+
+  - id: suggest-improvements
+    prompt: |
+      Based on this quality audit:
+      Overall grade: {check-quality.overall_grade}
+      Issues found: {check-quality.issues}
+
+      Suggest the top 3 most impactful improvements.
+      For each, explain: what to change, why, and estimated effort.
+    output:
+      improvements:
+        type: array
+        items: string
