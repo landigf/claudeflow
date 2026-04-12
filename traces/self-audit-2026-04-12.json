@@ -1,0 +1,256 @@
+{
+  "runId": "hzSpedBTsr1j3Y3cs0x1R",
+  "pipelineName": "claudeflow-self-audit",
+  "status": "completed",
+  "startedAt": "2026-04-12T11:22:03.170Z",
+  "finishedAt": "2026-04-12T11:24:04.079Z",
+  "totalDurationMs": 120909,
+  "totalTokens": {
+    "inputTokens": 1681,
+    "outputTokens": 4253
+  },
+  "totalCostUsd": 0.48133210000000004,
+  "steps": [
+    {
+      "stepId": "read-structure",
+      "stepName": "read-structure",
+      "status": "completed",
+      "durationMs": 32478,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Read the project structure of this TypeScript project.\nList all source files in src/ with a one-line description of each.\nNote the test coverage: which src/ modules have corresponding test files.\n",
+          "response": "Now let me map test coverage. The test files are:\n- `test/core/pipeline.test.ts` → covers `src/core/pipeline.ts` (and likely `step.ts`, `context.ts`, `schema.ts`)\n- `test/loader/yaml.test.ts` → covers `src/loader/yaml.ts` (and likely `interpolation.ts`)\n- `test/analyzer/analyzer.test.ts` → covers `src/analyzer/index.ts`\n- `test/testing/testing.test.ts` → covers `src/testing/` modules\n\nModules without dedicated test coverage: `src/control/`, `src/runtime/cli.ts`, `src/runtime/api.ts`, `src/observability/trace.ts`.\n\n```json\n{\n  \"files\": [\n    \"src/core/schema.ts — Re-exports Zod validation library for schema creation and type inference\",\n    \"src/core/step.ts — Fluent StepBuilder for creating LLM and deterministic processing steps\",\n    \"src/core/context.ts — Immutable Context interface for state flow between pipeline steps\",\n    \"src/core/pipeline.ts — Core pipeline execution engine orchestrating steps, control flow, and traces\",\n    \"src/control/branch.ts — Conditional branching control flow based on predicate functions\",\n    \"src/control/loop.ts — Loop control flow repeating a step until condition met or max iterations\",\n    \"src/control/map.ts — Map control flow executing a step over each item in a context array\",\n    \"src/runtime/types.ts — Runtime interface and types for LLM request execution\",\n    \"src/runtime/mock.ts — MockRuntime returning deterministic responses for testing\",\n    \"src/runtime/cli.ts — ClaudeCliRuntime spawning claude CLI for step execution\",\n    \"src/runtime/api.ts — ClaudeApiRuntime executing steps via Anthropic HTTP API\",\n    \"src/loader/yaml.ts — YAML pipeline definition parser with full control flow support\",\n    \"src/loader/interpolation.ts — Template variable interpolation for prompt templates\",\n    \"src/analyzer/index.ts — Pre-execution analysis estimating tokens, cost, and duration\",\n    \"src/observability/trace.ts — Trace data structures for pipeline execution metrics\",\n    \"src/testing/validate.ts — Static validation checking pipeline wiring for errors\",\n    \"src/testing/benchmark.ts — Benchmarking utility collecting stats across multiple runs\",\n    \"src/testing/index.ts — Testing module barrel exporting MockRuntime, validate, benchmark\",\n    \"src/index.ts — Main library barrel re-exporting all public APIs\"\n  ],\n  \"modules_without_tests\": [\n    \"src/control/branch.ts\",\n    \"src/control/loop.ts\",\n    \"src/control/map.ts\",\n    \"src/runtime/cli.ts\",\n    \"src/runtime/api.ts\",\n    \"src/observability/trace.ts\"\n  ]\n}\n```",
+          "usage": {
+            "inputTokens": 74,
+            "outputTokens": 1138,
+            "cacheReadTokens": 46907
+          },
+          "costUsd": 0.15868849999999998,
+          "durationMs": 32478
+        }
+      ],
+      "inputSnapshot": {},
+      "outputSnapshot": {
+        "files": [
+          "src/core/schema.ts — Re-exports Zod validation library for schema creation and type inference",
+          "src/core/step.ts — Fluent StepBuilder for creating LLM and deterministic processing steps",
+          "src/core/context.ts — Immutable Context interface for state flow between pipeline steps",
+          "src/core/pipeline.ts — Core pipeline execution engine orchestrating steps, control flow, and traces",
+          "src/control/branch.ts — Conditional branching control flow based on predicate functions",
+          "src/control/loop.ts — Loop control flow repeating a step until condition met or max iterations",
+          "src/control/map.ts — Map control flow executing a step over each item in a context array",
+          "src/runtime/types.ts — Runtime interface and types for LLM request execution",
+          "src/runtime/mock.ts — MockRuntime returning deterministic responses for testing",
+          "src/runtime/cli.ts — ClaudeCliRuntime spawning claude CLI for step execution",
+          "src/runtime/api.ts — ClaudeApiRuntime executing steps via Anthropic HTTP API",
+          "src/loader/yaml.ts — YAML pipeline definition parser with full control flow support",
+          "src/loader/interpolation.ts — Template variable interpolation for prompt templates",
+          "src/analyzer/index.ts — Pre-execution analysis estimating tokens, cost, and duration",
+          "src/observability/trace.ts — Trace data structures for pipeline execution metrics",
+          "src/testing/validate.ts — Static validation checking pipeline wiring for errors",
+          "src/testing/benchmark.ts — Benchmarking utility collecting stats across multiple runs",
+          "src/testing/index.ts — Testing module barrel exporting MockRuntime, validate, benchmark",
+          "src/index.ts — Main library barrel re-exporting all public APIs"
+        ],
+        "modules_without_tests": [
+          "src/control/branch.ts",
+          "src/control/loop.ts",
+          "src/control/map.ts",
+          "src/runtime/cli.ts",
+          "src/runtime/api.ts",
+          "src/observability/trace.ts"
+        ]
+      }
+    },
+    {
+      "stepId": "check-quality",
+      "stepName": "check-quality",
+      "status": "completed",
+      "durationMs": 76365,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Review the code quality of this project. Check for:\n1. Unused exports or dead code\n2. Inconsistent naming patterns\n3. Missing error handling\n4. Type safety issues (any casts, missing types)\n5. Files over 200 lines that should be split\n\nPrevious step found these files: [\"src/core/schema.ts — Re-exports Zod validation library for schema creation and type inference\",\"src/core/step.ts — Fluent StepBuilder for creating LLM and deterministic processing steps\",\"src/core/context.ts — Immutable Context interface for state flow between pipeline steps\",\"src/core/pipeline.ts — Core pipeline execution engine orchestrating steps, control flow, and traces\",\"src/control/branch.ts — Conditional branching control flow based on predicate functions\",\"src/control/loop.ts — Loop control flow repeating a step until condition met or max iterations\",\"src/control/map.ts — Map control flow executing a step over each item in a context array\",\"src/runtime/types.ts — Runtime interface and types for LLM request execution\",\"src/runtime/mock.ts — MockRuntime returning deterministic responses for testing\",\"src/runtime/cli.ts — ClaudeCliRuntime spawning claude CLI for step execution\",\"src/runtime/api.ts — ClaudeApiRuntime executing steps via Anthropic HTTP API\",\"src/loader/yaml.ts — YAML pipeline definition parser with full control flow support\",\"src/loader/interpolation.ts — Template variable interpolation for prompt templates\",\"src/analyzer/index.ts — Pre-execution analysis estimating tokens, cost, and duration\",\"src/observability/trace.ts — Trace data structures for pipeline execution metrics\",\"src/testing/validate.ts — Static validation checking pipeline wiring for errors\",\"src/testing/benchmark.ts — Benchmarking utility collecting stats across multiple runs\",\"src/testing/index.ts — Testing module barrel exporting MockRuntime, validate, benchmark\",\"src/index.ts — Main library barrel re-exporting all public APIs\"]\n\nRate each module A/B/C/D and list specific issues.\n",
+          "response": "```json\n{\n  \"grades\": [\n    \"src/core/schema.ts: A — Minimal, correct re-exports, nothing to fault\",\n    \"src/core/step.ts: A — Clean fluent builder, immutable, 1 minor cast on line 39\",\n    \"src/core/context.ts: A — Clean immutable design, proper Object.freeze, no issues\",\n    \"src/core/pipeline.ts: B — 450 lines (should split), 2 Record<string,unknown> casts (lines 243, 285), but comprehensive error handling\",\n    \"src/control/branch.ts: A — Minimal, focused, clean\",\n    \"src/control/loop.ts: A — Minimal, focused, clean\",\n    \"src/control/map.ts: A — Minimal, focused, clean\",\n    \"src/runtime/types.ts: A — Clean interface definitions, no issues\",\n    \"src/runtime/mock.ts: A — Simple, correct Runtime implementation\",\n    \"src/runtime/cli.ts: B — 209 lines, unsafe casts on Zod internals (lines 187, 203), incomplete zodToJsonSchema()\",\n    \"src/runtime/api.ts: A — Well-structured, proper timeout cleanup, minor cast on line 90\",\n    \"src/loader/yaml.ts: B — 235 lines, missing file I/O error handling in loadYaml(), resolvePath() duplicated from interpolation.ts\",\n    \"src/loader/interpolation.ts: A — Clean and focused, but resolve() duplicated in yaml.ts\",\n    \"src/analyzer/index.ts: B — 227 lines, unsafe cast on Zod internals (line 216)\",\n    \"src/observability/trace.ts: A — Clean type definitions\",\n    \"src/testing/validate.ts: A — Solid validation logic, defensive coding\",\n    \"src/testing/benchmark.ts: B — No try-catch around pipeline.run() (line 57), benchmark crashes on any failure\",\n    \"src/testing/index.ts: A — Clean barrel export\",\n    \"src/index.ts: A — Well-organized public API surface\"\n  ],\n  \"issues\": [\n    \"SPLIT: src/core/pipeline.ts is 450 lines — extract node executors (#executeLoopNode, #executeBranchNode, #executeMapNode) into separate files or a nodes/ subdirectory\",\n    \"SPLIT: src/loader/yaml.ts is 235 lines — extract buildZodSchema() and buildCondition() helpers into a separate yaml-helpers.ts\",\n    \"SPLIT: src/analyzer/index.ts is 227 lines — extract token estimation functions into estimator.ts\",\n    \"TYPE_SAFETY: src/runtime/cli.ts lines 187, 203 — unsafe casts into Zod internal _def structure; use zod-to-json-schema library or proper type guards\",\n    \"TYPE_SAFETY: src/analyzer/index.ts line 216 — same unsafe cast into Zod _def internals\",\n    \"TYPE_SAFETY: src/core/pipeline.ts lines 243, 285 — ctx.input cast to Record<string, unknown> without validation\",\n    \"MISSING_ERROR_HANDLING: src/loader/yaml.ts loadYaml() — fs.readFileSync has no try-catch; file-not-found or permission errors bubble up raw\",\n    \"MISSING_ERROR_HANDLING: src/loader/yaml.ts parseYamlString() — YAML parse errors from js-yaml bubble up unhandled\",\n    \"MISSING_ERROR_HANDLING: src/testing/benchmark.ts line 57 — pipeline.run() not wrapped in try-catch; one failed run kills entire benchmark\",\n    \"DUPLICATION: resolvePath() in src/loader/yaml.ts (line 226-234) duplicates resolve() in src/loader/interpolation.ts (line 14-23) — extract shared helper\",\n    \"INCOMPLETE: src/runtime/cli.ts zodToJsonSchema() — does not handle ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum and other common Zod types\",\n    \"INCONSISTENCY: control/ files (branch, loop, map) all duplicate the same StepDef|StepBuilder resolution pattern with 'build' in s type guard — extract to shared utility\"\n  ],\n  \"overall_grade\": \"B+\"\n}\n```",
+          "usage": {
+            "inputTokens": 1604,
+            "outputTokens": 2697,
+            "cacheReadTokens": 51846
+          },
+          "costUsd": 0.2638051,
+          "durationMs": 76365
+        }
+      ],
+      "inputSnapshot": {
+        "read-structure": {
+          "files": [
+            "src/core/schema.ts — Re-exports Zod validation library for schema creation and type inference",
+            "src/core/step.ts — Fluent StepBuilder for creating LLM and deterministic processing steps",
+            "src/core/context.ts — Immutable Context interface for state flow between pipeline steps",
+            "src/core/pipeline.ts — Core pipeline execution engine orchestrating steps, control flow, and traces",
+            "src/control/branch.ts — Conditional branching control flow based on predicate functions",
+            "src/control/loop.ts — Loop control flow repeating a step until condition met or max iterations",
+            "src/control/map.ts — Map control flow executing a step over each item in a context array",
+            "src/runtime/types.ts — Runtime interface and types for LLM request execution",
+            "src/runtime/mock.ts — MockRuntime returning deterministic responses for testing",
+            "src/runtime/cli.ts — ClaudeCliRuntime spawning claude CLI for step execution",
+            "src/runtime/api.ts — ClaudeApiRuntime executing steps via Anthropic HTTP API",
+            "src/loader/yaml.ts — YAML pipeline definition parser with full control flow support",
+            "src/loader/interpolation.ts — Template variable interpolation for prompt templates",
+            "src/analyzer/index.ts — Pre-execution analysis estimating tokens, cost, and duration",
+            "src/observability/trace.ts — Trace data structures for pipeline execution metrics",
+            "src/testing/validate.ts — Static validation checking pipeline wiring for errors",
+            "src/testing/benchmark.ts — Benchmarking utility collecting stats across multiple runs",
+            "src/testing/index.ts — Testing module barrel exporting MockRuntime, validate, benchmark",
+            "src/index.ts — Main library barrel re-exporting all public APIs"
+          ],
+          "modules_without_tests": [
+            "src/control/branch.ts",
+            "src/control/loop.ts",
+            "src/control/map.ts",
+            "src/runtime/cli.ts",
+            "src/runtime/api.ts",
+            "src/observability/trace.ts"
+          ]
+        }
+      },
+      "outputSnapshot": {
+        "grades": [
+          "src/core/schema.ts: A — Minimal, correct re-exports, nothing to fault",
+          "src/core/step.ts: A — Clean fluent builder, immutable, 1 minor cast on line 39",
+          "src/core/context.ts: A — Clean immutable design, proper Object.freeze, no issues",
+          "src/core/pipeline.ts: B — 450 lines (should split), 2 Record<string,unknown> casts (lines 243, 285), but comprehensive error handling",
+          "src/control/branch.ts: A — Minimal, focused, clean",
+          "src/control/loop.ts: A — Minimal, focused, clean",
+          "src/control/map.ts: A — Minimal, focused, clean",
+          "src/runtime/types.ts: A — Clean interface definitions, no issues",
+          "src/runtime/mock.ts: A — Simple, correct Runtime implementation",
+          "src/runtime/cli.ts: B — 209 lines, unsafe casts on Zod internals (lines 187, 203), incomplete zodToJsonSchema()",
+          "src/runtime/api.ts: A — Well-structured, proper timeout cleanup, minor cast on line 90",
+          "src/loader/yaml.ts: B — 235 lines, missing file I/O error handling in loadYaml(), resolvePath() duplicated from interpolation.ts",
+          "src/loader/interpolation.ts: A — Clean and focused, but resolve() duplicated in yaml.ts",
+          "src/analyzer/index.ts: B — 227 lines, unsafe cast on Zod internals (line 216)",
+          "src/observability/trace.ts: A — Clean type definitions",
+          "src/testing/validate.ts: A — Solid validation logic, defensive coding",
+          "src/testing/benchmark.ts: B — No try-catch around pipeline.run() (line 57), benchmark crashes on any failure",
+          "src/testing/index.ts: A — Clean barrel export",
+          "src/index.ts: A — Well-organized public API surface"
+        ],
+        "issues": [
+          "SPLIT: src/core/pipeline.ts is 450 lines — extract node executors (#executeLoopNode, #executeBranchNode, #executeMapNode) into separate files or a nodes/ subdirectory",
+          "SPLIT: src/loader/yaml.ts is 235 lines — extract buildZodSchema() and buildCondition() helpers into a separate yaml-helpers.ts",
+          "SPLIT: src/analyzer/index.ts is 227 lines — extract token estimation functions into estimator.ts",
+          "TYPE_SAFETY: src/runtime/cli.ts lines 187, 203 — unsafe casts into Zod internal _def structure; use zod-to-json-schema library or proper type guards",
+          "TYPE_SAFETY: src/analyzer/index.ts line 216 — same unsafe cast into Zod _def internals",
+          "TYPE_SAFETY: src/core/pipeline.ts lines 243, 285 — ctx.input cast to Record<string, unknown> without validation",
+          "MISSING_ERROR_HANDLING: src/loader/yaml.ts loadYaml() — fs.readFileSync has no try-catch; file-not-found or permission errors bubble up raw",
+          "MISSING_ERROR_HANDLING: src/loader/yaml.ts parseYamlString() — YAML parse errors from js-yaml bubble up unhandled",
+          "MISSING_ERROR_HANDLING: src/testing/benchmark.ts line 57 — pipeline.run() not wrapped in try-catch; one failed run kills entire benchmark",
+          "DUPLICATION: resolvePath() in src/loader/yaml.ts (line 226-234) duplicates resolve() in src/loader/interpolation.ts (line 14-23) — extract shared helper",
+          "INCOMPLETE: src/runtime/cli.ts zodToJsonSchema() — does not handle ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum and other common Zod types",
+          "INCONSISTENCY: control/ files (branch, loop, map) all duplicate the same StepDef|StepBuilder resolution pattern with 'build' in s type guard — extract to shared utility"
+        ],
+        "overall_grade": "B+"
+      }
+    },
+    {
+      "stepId": "suggest-improvements",
+      "stepName": "suggest-improvements",
+      "status": "completed",
+      "durationMs": 12062,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Based on this quality audit:\nOverall grade: B+\nIssues found: [\"SPLIT: src/core/pipeline.ts is 450 lines — extract node executors (#executeLoopNode, #executeBranchNode, #executeMapNode) into separate files or a nodes/ subdirectory\",\"SPLIT: src/loader/yaml.ts is 235 lines — extract buildZodSchema() and buildCondition() helpers into a separate yaml-helpers.ts\",\"SPLIT: src/analyzer/index.ts is 227 lines — extract token estimation functions into estimator.ts\",\"TYPE_SAFETY: src/runtime/cli.ts lines 187, 203 — unsafe casts into Zod internal _def structure; use zod-to-json-schema library or proper type guards\",\"TYPE_SAFETY: src/analyzer/index.ts line 216 — same unsafe cast into Zod _def internals\",\"TYPE_SAFETY: src/core/pipeline.ts lines 243, 285 — ctx.input cast to Record<string, unknown> without validation\",\"MISSING_ERROR_HANDLING: src/loader/yaml.ts loadYaml() — fs.readFileSync has no try-catch; file-not-found or permission errors bubble up raw\",\"MISSING_ERROR_HANDLING: src/loader/yaml.ts parseYamlString() — YAML parse errors from js-yaml bubble up unhandled\",\"MISSING_ERROR_HANDLING: src/testing/benchmark.ts line 57 — pipeline.run() not wrapped in try-catch; one failed run kills entire benchmark\",\"DUPLICATION: resolvePath() in src/loader/yaml.ts (line 226-234) duplicates resolve() in src/loader/interpolation.ts (line 14-23) — extract shared helper\",\"INCOMPLETE: src/runtime/cli.ts zodToJsonSchema() — does not handle ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum and other common Zod types\",\"INCONSISTENCY: control/ files (branch, loop, map) all duplicate the same StepDef|StepBuilder resolution pattern with 'build' in s type guard — extract to shared utility\"]\n\nSuggest the top 3 most impactful improvements.\nFor each, explain: what to change, why, and estimated effort.\n",
+          "response": "\n\n```json\n{\n  \"improvements\": [\n    \"Replace the incomplete zodToJsonSchema() in src/runtime/cli.ts with the zod-to-json-schema library. This fixes both the TYPE_SAFETY issues (unsafe casts into Zod _def internals across cli.ts and analyzer/index.ts) and the INCOMPLETE issue (missing ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum support). Impact: eliminates a class of runtime bugs where unsupported Zod types silently produce wrong JSON schemas sent to Claude. Effort: ~1 hour — install zod-to-json-schema, replace the custom function, remove the unsafe casts, update tests.\",\n    \"Extract the duplicated StepDef|StepBuilder resolution pattern from src/control/branch.ts, loop.ts, and map.ts into a shared utility (e.g. src/control/resolve-step.ts). This addresses the INCONSISTENCY and DUPLICATION issues and makes adding new control-flow nodes less error-prone. Impact: reduces maintenance burden and prevents divergence bugs when the resolution logic changes. Effort: ~30 minutes — extract helper, update three files, run tests.\",\n    \"Add structured error handling in src/loader/yaml.ts for loadYaml() (fs.readFileSync) and parseYamlString() (js-yaml parse), and in src/testing/benchmark.ts for pipeline.run(). Wrap each in try-catch and throw typed errors (e.g. LoaderError, BenchmarkRunError) with clear messages. Impact: prevents raw stack traces from reaching users and stops a single failed benchmark run from killing the entire suite. Effort: ~45 minutes — add error classes, wrap three call sites, add error-path tests.\"\n  ]\n}\n```",
+          "usage": {
+            "inputTokens": 3,
+            "outputTokens": 418,
+            "cacheReadTokens": 11272
+          },
+          "costUsd": 0.0588385,
+          "durationMs": 12062
+        }
+      ],
+      "inputSnapshot": {
+        "read-structure": {
+          "files": [
+            "src/core/schema.ts — Re-exports Zod validation library for schema creation and type inference",
+            "src/core/step.ts — Fluent StepBuilder for creating LLM and deterministic processing steps",
+            "src/core/context.ts — Immutable Context interface for state flow between pipeline steps",
+            "src/core/pipeline.ts — Core pipeline execution engine orchestrating steps, control flow, and traces",
+            "src/control/branch.ts — Conditional branching control flow based on predicate functions",
+            "src/control/loop.ts — Loop control flow repeating a step until condition met or max iterations",
+            "src/control/map.ts — Map control flow executing a step over each item in a context array",
+            "src/runtime/types.ts — Runtime interface and types for LLM request execution",
+            "src/runtime/mock.ts — MockRuntime returning deterministic responses for testing",
+            "src/runtime/cli.ts — ClaudeCliRuntime spawning claude CLI for step execution",
+            "src/runtime/api.ts — ClaudeApiRuntime executing steps via Anthropic HTTP API",
+            "src/loader/yaml.ts — YAML pipeline definition parser with full control flow support",
+            "src/loader/interpolation.ts — Template variable interpolation for prompt templates",
+            "src/analyzer/index.ts — Pre-execution analysis estimating tokens, cost, and duration",
+            "src/observability/trace.ts — Trace data structures for pipeline execution metrics",
+            "src/testing/validate.ts — Static validation checking pipeline wiring for errors",
+            "src/testing/benchmark.ts — Benchmarking utility collecting stats across multiple runs",
+            "src/testing/index.ts — Testing module barrel exporting MockRuntime, validate, benchmark",
+            "src/index.ts — Main library barrel re-exporting all public APIs"
+          ],
+          "modules_without_tests": [
+            "src/control/branch.ts",
+            "src/control/loop.ts",
+            "src/control/map.ts",
+            "src/runtime/cli.ts",
+            "src/runtime/api.ts",
+            "src/observability/trace.ts"
+          ]
+        },
+        "check-quality": {
+          "grades": [
+            "src/core/schema.ts: A — Minimal, correct re-exports, nothing to fault",
+            "src/core/step.ts: A — Clean fluent builder, immutable, 1 minor cast on line 39",
+            "src/core/context.ts: A — Clean immutable design, proper Object.freeze, no issues",
+            "src/core/pipeline.ts: B — 450 lines (should split), 2 Record<string,unknown> casts (lines 243, 285), but comprehensive error handling",
+            "src/control/branch.ts: A — Minimal, focused, clean",
+            "src/control/loop.ts: A — Minimal, focused, clean",
+            "src/control/map.ts: A — Minimal, focused, clean",
+            "src/runtime/types.ts: A — Clean interface definitions, no issues",
+            "src/runtime/mock.ts: A — Simple, correct Runtime implementation",
+            "src/runtime/cli.ts: B — 209 lines, unsafe casts on Zod internals (lines 187, 203), incomplete zodToJsonSchema()",
+            "src/runtime/api.ts: A — Well-structured, proper timeout cleanup, minor cast on line 90",
+            "src/loader/yaml.ts: B — 235 lines, missing file I/O error handling in loadYaml(), resolvePath() duplicated from interpolation.ts",
+            "src/loader/interpolation.ts: A — Clean and focused, but resolve() duplicated in yaml.ts",
+            "src/analyzer/index.ts: B — 227 lines, unsafe cast on Zod internals (line 216)",
+            "src/observability/trace.ts: A — Clean type definitions",
+            "src/testing/validate.ts: A — Solid validation logic, defensive coding",
+            "src/testing/benchmark.ts: B — No try-catch around pipeline.run() (line 57), benchmark crashes on any failure",
+            "src/testing/index.ts: A — Clean barrel export",
+            "src/index.ts: A — Well-organized public API surface"
+          ],
+          "issues": [
+            "SPLIT: src/core/pipeline.ts is 450 lines — extract node executors (#executeLoopNode, #executeBranchNode, #executeMapNode) into separate files or a nodes/ subdirectory",
+            "SPLIT: src/loader/yaml.ts is 235 lines — extract buildZodSchema() and buildCondition() helpers into a separate yaml-helpers.ts",
+            "SPLIT: src/analyzer/index.ts is 227 lines — extract token estimation functions into estimator.ts",
+            "TYPE_SAFETY: src/runtime/cli.ts lines 187, 203 — unsafe casts into Zod internal _def structure; use zod-to-json-schema library or proper type guards",
+            "TYPE_SAFETY: src/analyzer/index.ts line 216 — same unsafe cast into Zod _def internals",
+            "TYPE_SAFETY: src/core/pipeline.ts lines 243, 285 — ctx.input cast to Record<string, unknown> without validation",
+            "MISSING_ERROR_HANDLING: src/loader/yaml.ts loadYaml() — fs.readFileSync has no try-catch; file-not-found or permission errors bubble up raw",
+            "MISSING_ERROR_HANDLING: src/loader/yaml.ts parseYamlString() — YAML parse errors from js-yaml bubble up unhandled",
+            "MISSING_ERROR_HANDLING: src/testing/benchmark.ts line 57 — pipeline.run() not wrapped in try-catch; one failed run kills entire benchmark",
+            "DUPLICATION: resolvePath() in src/loader/yaml.ts (line 226-234) duplicates resolve() in src/loader/interpolation.ts (line 14-23) — extract shared helper",
+            "INCOMPLETE: src/runtime/cli.ts zodToJsonSchema() — does not handle ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum and other common Zod types",
+            "INCONSISTENCY: control/ files (branch, loop, map) all duplicate the same StepDef|StepBuilder resolution pattern with 'build' in s type guard — extract to shared utility"
+          ],
+          "overall_grade": "B+"
+        }
+      },
+      "outputSnapshot": {
+        "improvements": [
+          "Replace the incomplete zodToJsonSchema() in src/runtime/cli.ts with the zod-to-json-schema library. This fixes both the TYPE_SAFETY issues (unsafe casts into Zod _def internals across cli.ts and analyzer/index.ts) and the INCOMPLETE issue (missing ZodOptional, ZodNullable, ZodUnion, ZodArray, ZodEnum support). Impact: eliminates a class of runtime bugs where unsupported Zod types silently produce wrong JSON schemas sent to Claude. Effort: ~1 hour — install zod-to-json-schema, replace the custom function, remove the unsafe casts, update tests.",
+          "Extract the duplicated StepDef|StepBuilder resolution pattern from src/control/branch.ts, loop.ts, and map.ts into a shared utility (e.g. src/control/resolve-step.ts). This addresses the INCONSISTENCY and DUPLICATION issues and makes adding new control-flow nodes less error-prone. Impact: reduces maintenance burden and prevents divergence bugs when the resolution logic changes. Effort: ~30 minutes — extract helper, update three files, run tests.",
+          "Add structured error handling in src/loader/yaml.ts for loadYaml() (fs.readFileSync) and parseYamlString() (js-yaml parse), and in src/testing/benchmark.ts for pipeline.run(). Wrap each in try-catch and throw typed errors (e.g. LoaderError, BenchmarkRunError) with clear messages. Impact: prevents raw stack traces from reaching users and stops a single failed benchmark run from killing the entire suite. Effort: ~45 minutes — add error classes, wrap three call sites, add error-path tests."
+        ]
+      }
+    }
+  ]
+}
