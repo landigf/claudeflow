@@ -19,6 +19,11 @@ export { MockRuntime } from "./runtime/mock.js";
 export { ClaudeCliRuntime } from "./runtime/cli.js";
 export { ClaudeApiRuntime } from "./runtime/api.js";
 
+// Memory & Checkpointing
+export { MemoryStore } from "./memory/store.js";
+export { CheckpointManager } from "./memory/checkpoint.js";
+export type { Checkpoint } from "./memory/checkpoint.js";
+
 // Testing
 export { validate } from "./testing/validate.js";
 export { benchmark } from "./testing/benchmark.js";
