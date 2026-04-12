@@ -43,7 +43,7 @@ export class MockRuntime implements Runtime {
       usage: { inputTokens: 0, outputTokens: 0 },
       costUsd: 0,
       durationMs: 1,
-      model: "mock",
+      model: request.model ?? "mock",
     };
   }
 

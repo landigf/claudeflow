@@ -69,6 +69,9 @@ export class ClaudeCliRuntime implements Runtime {
     if (this.#permissionMode) {
       args.push("--permission-mode", this.#permissionMode);
     }
+    if (request.model) {
+      args.push("--model", request.model);
+    }
 
     // Build the full prompt with system prompt if provided
     const fullPrompt = request.systemPrompt

@@ -237,6 +237,30 @@ describe("pipeline — map", () => {
   });
 });
 
+describe("pipeline — model selection", () => {
+  it("passes per-step model to runtime", async () => {
+    const cheap = step("cheap").prompt("fast task").useModel("claude-haiku-4-5");
+    const smart = step("smart").prompt("hard task").useModel("claude-opus-4-6");
+    const p = pipeline("model-test").step(cheap).step(smart);
+
+    const mock = new MockRuntime({ cheap: "fast", smart: "deep" });
+    await p.run({}, { runtime: mock });
+
+    expect(mock.calls[0].model).toBe("claude-haiku-4-5");
+    expect(mock.calls[1].model).toBe("claude-opus-4-6");
+  });
+
+  it("uses no model override when not specified", async () => {
+    const plain = step("plain").prompt("default model");
+    const p = pipeline("no-model").step(plain);
+
+    const mock = new MockRuntime({ plain: "ok" });
+    await p.run({}, { runtime: mock });
+
+    expect(mock.calls[0].model).toBeUndefined();
+  });
+});
+
 describe("pipeline — trace", () => {
   it("produces a complete trace with metadata", async () => {
     const s = step("traced").prompt("hello");
