@@ -1,0 +1,59 @@
+# Pipeline: security-audit
+# Run security checks on any project using common open-source tools.
+# Composes Semgrep-style pattern checks + secret scanning + dependency audit.
+#
+# Run: npx claudeflow run pipelines/security-audit.yaml --cwd /path/to/project --verbose
+
+name: security-audit
+description: Check a codebase for security issues — secrets, vulnerabilities, code patterns
+version: "1.0.0"
+
+steps:
+  - id: secrets
+    tool: shell
+    action: run
+    params:
+      command: "grep -rn 'password\\|secret\\|api_key\\|token' --include='*.ts' --include='*.js' --include='*.py' --include='*.yaml' --include='*.json' . | grep -v node_modules | grep -v '.git' | head -20 || echo 'No secrets found'"
+      timeout: 30000
+
+  - id: deps
+    tool: shell
+    action: run
+    params:
+      command: "npm audit --json 2>/dev/null | head -50 || pip-audit 2>/dev/null | head -20 || echo 'No package manager audit available'"
+      timeout: 60000
+
+  - id: env-files
+    tool: shell
+    action: run
+    params:
+      command: "find . -name '.env' -o -name '.env.*' -o -name 'credentials*' -o -name '*secret*' | grep -v node_modules | grep -v .git || echo 'No env files found'"
+      timeout: 10000
+
+  - id: analyze
+    prompt: |
+      Security scan results for this project:
+
+      Secret patterns found:
+      {secrets.stdout}
+
+      Dependency audit:
+      {deps.stdout}
+
+      Sensitive files:
+      {env-files.stdout}
+
+      Analyze these findings:
+      1. Which are real security issues vs false positives?
+      2. Rate severity: critical / high / medium / low / info
+      3. Recommend specific fixes for each real issue
+      4. Overall security grade: A (excellent) to F (critical issues)
+    output:
+      grade: string
+      real_issues:
+        type: array
+        items: string
+      false_positives: number
+      recommendations:
+        type: array
+        items: string

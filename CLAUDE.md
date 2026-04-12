@@ -2,7 +2,7 @@
 
 ## What this is
 
-ClaudeFlow is a TypeScript library for composable AI task pipelines. Define steps with Zod schemas, compose them with loops/branches/maps, run them on Claude CLI or API, get full traces.
+ClaudeFlow is a TypeScript library for composable AI task pipelines. Define steps with Zod schemas, compose with loops/branches/maps/optimize, run on Claude CLI or API, get full traces. Tool adapters enable deterministic steps (shell, file, GitHub, eval) without LLM calls.
 
 ## After every change
 
@@ -10,36 +10,36 @@ ClaudeFlow is a TypeScript library for composable AI task pipelines. Define step
 npm run test && npm run check
 ```
 
+## CLI
+
+```bash
+npx claudeflow run pipeline.yaml --verbose
+npx claudeflow analyze pipeline.yaml
+npx claudeflow validate pipeline.yaml
+```
+
 ## Architecture
 
 ```
-src/core/          → Step, Pipeline, Context, Schema
-src/control/       → Loop, Branch, Map (wired into pipeline executor)
-src/runtime/       → Runtime interface, ClaudeCliRuntime, MockRuntime
-src/analyzer/      → Pre-execution analysis (token/cost/time prediction)
-src/observability/ → Trace types
-src/loader/        → YAML parser, prompt interpolation
+src/core/          → Step, Pipeline, Context, Schema (6 node types)
+src/control/       → Loop, Branch, Map, Optimize (autoresearch pattern)
+src/runtime/       → ClaudeCliRuntime, ClaudeApiRuntime, MockRuntime
+src/tools/         → ShellTool, GitHubTool, FileTool, EvalTool (deterministic)
+src/memory/        → MemoryStore (file-based KV), CheckpointManager (resume)
+src/analyzer/      → Token/cost/time prediction
+src/loader/        → YAML parser (steps, tools, control flow, optimize)
+src/testing/       → validate(), benchmark()
+src/cli.ts         → CLI binary entry point
 ```
 
-Dependencies flow forward: Core → Control → Runtime → Analyzer → Observability.
+## Pipeline node types
 
-## What works
-
-- `step()` builder with fluent API, Zod schemas, retry, fallback
-- `pipeline()` executor with step, loop, branch, map nodes
-- `MockRuntime` for zero-token testing
-- `ClaudeCliRuntime` — spawns `claude -p` CLI
-- `loadYaml()` / `parseYamlString()` — YAML pipeline definitions
-- `analyze()` / `formatAnalysis()` — predict tokens, cost, time before running
-- Prompt interpolation with `{variable}` and `{step.field}` syntax
-- Full `PipelineTrace` with per-step timing, tokens, cost
-
-## What's not built yet
-
-- `ClaudeApiRuntime` (Anthropic SDK)
-- Benchmark harness
-- Snapshot test recording/replay
-- CLI binary (`npx claudeflow run pipeline.yaml`)
+1. `step` — LLM call with typed I/O, retry, fallback
+2. `loop` — repeat until condition
+3. `branch` — conditional routing
+4. `map` — run step over array items (concurrent)
+5. `tool` — deterministic tool adapter call (no LLM, no tokens)
+6. `optimize` — autoresearch loop: mutate → eval → keep/discard → repeat
 
 ## Code style
 
@@ -47,3 +47,4 @@ Dependencies flow forward: Core → Control → Runtime → Analyzer → Observa
 - TypeScript strict mode
 - Immutable data — Context is frozen, builders return new instances
 - Zod for all schemas
+- ESM only — no require(), use imports

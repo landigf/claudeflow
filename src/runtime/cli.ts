@@ -11,6 +11,12 @@ export interface ClaudeCliRuntimeOptions {
   defaultTimeoutMs?: number;
   /** Permission mode. Default: "plan" (read-only tools) */
   permissionMode?: "plan" | "bypassPermissions";
+  /** Max turns per invocation. Prevents runaway loops. */
+  maxTurns?: number;
+  /** Max budget in USD per invocation. Stops if exceeded. */
+  maxBudgetUsd?: number;
+  /** MCP config file path for external tool access. */
+  mcpConfig?: string;
 }
 
 interface ClaudeCliJsonResponse {
@@ -52,11 +58,17 @@ export class ClaudeCliRuntime implements Runtime {
   readonly #cwd: string;
   readonly #defaultTimeoutMs: number;
   readonly #permissionMode: string;
+  readonly #maxTurns?: number;
+  readonly #maxBudgetUsd?: number;
+  readonly #mcpConfig?: string;
 
   constructor(options?: ClaudeCliRuntimeOptions) {
     this.#command = options?.command ?? "claude";
     this.#cwd = options?.cwd ?? process.cwd();
     this.#defaultTimeoutMs = options?.defaultTimeoutMs ?? 120_000;
+    this.#maxTurns = options?.maxTurns;
+    this.#maxBudgetUsd = options?.maxBudgetUsd;
+    this.#mcpConfig = options?.mcpConfig;
     this.#permissionMode = options?.permissionMode ?? "plan";
   }
 
@@ -71,6 +83,18 @@ export class ClaudeCliRuntime implements Runtime {
     }
     if (request.model) {
       args.push("--model", request.model);
+    }
+    if (request.tools?.length) {
+      args.push("--allowedTools", request.tools.join(","));
+    }
+    if (this.#maxTurns) {
+      args.push("--max-turns", String(this.#maxTurns));
+    }
+    if (this.#maxBudgetUsd) {
+      args.push("--max-budget-usd", String(this.#maxBudgetUsd));
+    }
+    if (this.#mcpConfig) {
+      args.push("--mcp-config", this.#mcpConfig);
     }
 
     // Build the full prompt with system prompt if provided

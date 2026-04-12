@@ -102,6 +102,54 @@ steps:
     expect(result.trace.steps).toHaveLength(3); // 1 produce + 2 map items
   });
 
+  it("parses tool nodes from YAML", async () => {
+    const yaml = `
+name: tool-test
+steps:
+  - id: run-echo
+    tool: shell
+    action: run
+    params:
+      command: "echo hello"
+`;
+    const p = parseYamlString(yaml);
+    expect(p.nodes).toHaveLength(1);
+    expect(p.nodes[0].type).toBe("tool");
+
+    const { ShellTool } = await import("../../src/tools/shell.js");
+    const tools = new Map();
+    tools.set("shell", new ShellTool());
+    const mock = new MockRuntime({});
+    const result = await p.run({}, { runtime: mock, tools });
+    expect(result.trace.status).toBe("completed");
+    const output = result.output as { stdout: string };
+    expect(output.stdout).toBe("hello");
+  });
+
+  it("parses optimize block from YAML", () => {
+    const yaml = `
+name: optimize-test
+steps:
+  - id: setup
+    prompt: "setup"
+optimize:
+  mutate:
+    id: improve
+    prompt: "improve the code"
+  evaluate:
+    id: measure
+    prompt: "measure quality"
+  metric: score
+  direction: higher
+  maxIterations: 5
+`;
+    const p = parseYamlString(yaml);
+    // 1 regular step + 1 optimize node
+    expect(p.nodes).toHaveLength(2);
+    expect(p.nodes[0].type).toBe("step");
+    expect(p.nodes[1].type).toBe("optimize");
+  });
+
   it("throws on invalid YAML (missing name)", () => {
     expect(() => parseYamlString("steps: []")).toThrow("must have a 'name' field");
   });

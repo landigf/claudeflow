@@ -5,6 +5,9 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "claudeflow": "./dist/cli.js"
+  },
   "exports": {
     ".": "./dist/index.js",
     "./testing": "./dist/testing/index.js",
