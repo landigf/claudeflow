@@ -8,10 +8,8 @@
   "exports": {
     ".": "./dist/index.js",
     "./testing": "./dist/testing/index.js",
-    "./runtime": "./dist/runtime/types.js"
-  },
-  "bin": {
-    "claudeflow": "./dist/cli.js"
+    "./runtime": "./dist/runtime/types.js",
+    "./runtime/cli": "./dist/runtime/cli.js"
   },
   "scripts": {
     "build": "tsc",

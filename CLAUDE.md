@@ -14,16 +14,13 @@ npm run test && npm run check
 
 ```
 src/core/       → Step, Pipeline, Context, Schema (the 4 primitives)
-src/control/    → Loop, Branch, Map (control flow)
-src/runtime/    → Runtime interface + implementations (CLI, API, Mock)
-src/observability/ → Trace types, event callbacks, metrics
-src/analyzer/   → Pre-execution analysis (token/cost/time prediction)
-src/errors/     → Error types, retry logic, circuit breaker
-src/loader/     → YAML parser, prompt interpolation
-src/testing/    → MockRuntime, snapshot, validate, benchmark
+src/control/    → Loop, Branch, Map (control flow — wired into pipeline executor)
+src/runtime/    → Runtime interface + implementations (CLI, Mock)
+src/observability/ → Trace types
+src/loader/     → Prompt interpolation
 ```
 
-Dependencies flow forward: Core → Control → Runtime → Observability → Testing.
+Dependencies flow forward: Core → Control → Runtime → Observability.
 Never import backward (e.g., runtime must not import from control).
 
 ## Code style
@@ -33,3 +30,8 @@ Never import backward (e.g., runtime must not import from control).
 - No classes unless they need private state — prefer functions and interfaces
 - Zod for all schemas — re-export from `src/core/schema.ts`
 - Immutable data — Context is frozen, StepBuilder returns new instances
+
+## What exists vs what's planned
+
+**Working now:** step, pipeline, loop, branch, map, MockRuntime, ClaudeCliRuntime, prompt interpolation, traces
+**Not yet built:** YAML loader, analyzer (token/cost prediction), ClaudeApiRuntime, benchmark harness
