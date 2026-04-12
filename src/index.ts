@@ -13,11 +13,15 @@ export { loadYaml, parseYamlString } from "./loader/yaml.js";
 
 // Analyzer
 export { analyze, formatAnalysis } from "./analyzer/index.js";
-export type { PipelineAnalysis } from "./analyzer/index.js";
 
 // Runtime
 export { MockRuntime } from "./runtime/mock.js";
 export { ClaudeCliRuntime } from "./runtime/cli.js";
+export { ClaudeApiRuntime } from "./runtime/api.js";
+
+// Testing
+export { validate } from "./testing/validate.js";
+export { benchmark } from "./testing/benchmark.js";
 
 // Types
 export type { StepDef, RetryConfig, StepBuilder } from "./core/step.js";
@@ -25,7 +29,11 @@ export type { PipelineDef, PipelineRunOptions, PipelineResult } from "./core/pip
 export type { Context, ContextMeta } from "./core/context.js";
 export type { Runtime, RuntimeRequest, RuntimeResponse, TokenUsage } from "./runtime/types.js";
 export type { PipelineTrace, StepTrace, AttemptTrace } from "./observability/trace.js";
+export type { PipelineAnalysis } from "./analyzer/index.js";
 export type { ClaudeCliRuntimeOptions } from "./runtime/cli.js";
+export type { ClaudeApiRuntimeOptions } from "./runtime/api.js";
 export type { LoopDef, LoopConfig } from "./control/loop.js";
 export type { BranchDef } from "./control/branch.js";
 export type { MapDef, MapConfig } from "./control/map.js";
+export type { ValidationError } from "./testing/validate.js";
+export type { BenchmarkResult, BenchmarkOptions } from "./testing/benchmark.js";
