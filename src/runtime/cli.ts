@@ -114,9 +114,9 @@ export class ClaudeCliRuntime implements Runtime {
     let structured: unknown;
     if (request.outputSchema) {
       try {
-        const jsonMatch = parsed.result.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          structured = request.outputSchema.parse(JSON.parse(jsonMatch[0]));
+        const jsonStr = extractJsonObject(parsed.result);
+        if (jsonStr) {
+          structured = request.outputSchema.parse(JSON.parse(jsonStr));
         }
       } catch {
         // Schema validation failed — structured remains undefined
@@ -208,4 +208,23 @@ function zodToJsonSchema(schema: unknown): Record<string, unknown> {
   }
 
   return { type: "string" };
+}
+
+/** Extract the first balanced JSON object from a string. */
+function extractJsonObject(text: string): string | undefined {
+  const start = text.indexOf("{");
+  if (start === -1) return undefined;
+  let depth = 0;
+  let inString = false;
+  let escape = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escape) { escape = false; continue; }
+    if (ch === "\\" && inString) { escape = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return undefined;
 }
