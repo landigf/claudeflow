@@ -1,0 +1,62 @@
+{
+  "timestamp": "2026-04-12T12:38:37.860Z",
+  "results": [
+    {
+      "name": "Simple code question",
+      "description": "Single question, no tools needed",
+      "raw": {
+        "durationMs": 8144,
+        "costUsd": 0.09462775000000001,
+        "tokens": 160,
+        "outputLength": 276
+      },
+      "flow": {
+        "durationMs": 21822,
+        "costUsd": 0.09449025,
+        "tokens": 154,
+        "outputLength": 250,
+        "steps": 1
+      },
+      "winner": "Raw CLI",
+      "reason": "Simple questions don't need pipeline structure"
+    },
+    {
+      "name": "Structured code review",
+      "description": "3 specific checks on one file",
+      "raw": {
+        "durationMs": 48066,
+        "costUsd": 0.180101,
+        "tokens": 1667,
+        "outputLength": 189
+      },
+      "flow": {
+        "durationMs": 85832,
+        "costUsd": 0.33794225,
+        "tokens": 1325,
+        "outputLength": 1774,
+        "steps": 3
+      },
+      "winner": "ClaudeFlow",
+      "reason": "ClaudeFlow found 23 issues (structured), raw found ~0 (unstructured)"
+    },
+    {
+      "name": "Multi-step improvement",
+      "description": "Find bug → fix → verify tests pass",
+      "raw": {
+        "durationMs": 180008,
+        "costUsd": 0,
+        "tokens": 0,
+        "outputLength": 9
+      },
+      "flow": {
+        "durationMs": 192369,
+        "costUsd": 0.7159059999999999,
+        "tokens": 5796,
+        "outputLength": 566,
+        "steps": 3
+      },
+      "winner": "ClaudeFlow",
+      "reason": "ClaudeFlow verified tests pass, structured trace saved"
+    }
+  ]
+}

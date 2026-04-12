@@ -8,6 +8,15 @@ import type { LoopDef } from "../control/loop.js";
 import type { BranchDef } from "../control/branch.js";
 import type { MapDef } from "../control/map.js";
 
+class PartialMapError extends Error {
+  constructor(
+    message: string,
+    public readonly traces: StepTrace[],
+  ) {
+    super(message);
+  }
+}
+
 export interface PipelineRunOptions {
   runtime: Runtime;
   verbose?: boolean;
@@ -78,17 +87,24 @@ export class PipelineDef {
         stepTraces.push(...result.traces);
         ctx = result.ctx;
       } catch (error) {
-        const nodeId = getNodeId(node);
-        stepTraces.push({
-          stepId: nodeId,
-          stepName: nodeId,
-          status: "failed",
-          durationMs: 0,
-          attempts: [],
-          inputSnapshot: ctx.state,
-          outputSnapshot: undefined,
-        });
-        pipelineStatus = "failed";
+        if (error instanceof PartialMapError) {
+          stepTraces.push(...error.traces);
+          pipelineStatus = error.traces.some((t) => t.status === "completed")
+            ? "partial"
+            : "failed";
+        } else {
+          const nodeId = getNodeId(node);
+          stepTraces.push({
+            stepId: nodeId,
+            stepName: nodeId,
+            status: "failed",
+            durationMs: 0,
+            attempts: [],
+            inputSnapshot: ctx.state,
+            outputSnapshot: undefined,
+          });
+          pipelineStatus = "failed";
+        }
         if (options.verbose) {
           console.log(`  ✗ ${(error as Error).message?.slice(0, 100)}`);
         }
@@ -253,6 +269,7 @@ export class PipelineDef {
     const traces: StepTrace[] = new Array(items.length);
     const results: unknown[] = new Array(items.length);
     const concurrency = mapDef.config.concurrency ?? 1;
+    let hasFailure = false;
 
     // Process items in batches of `concurrency` size
     for (let batchStart = 0; batchStart < items.length; batchStart += concurrency) {
@@ -265,16 +282,44 @@ export class PipelineDef {
           process.stdout.write(`  [${i + 1}/${items.length}] `);
         }
 
-        const trace = await this.#executeStep(mapDef.step, itemCtx, options);
-        traces[i] = trace;
-        results[i] = trace.outputSnapshot;
+        const stepStart = Date.now();
+        try {
+          const trace = await this.#executeStep(mapDef.step, itemCtx, options);
+          traces[i] = trace;
+          results[i] = trace.outputSnapshot;
 
-        if (options.verbose) {
-          console.log(`✓ ${trace.durationMs}ms`);
+          if (options.verbose) {
+            console.log(`✓ ${trace.durationMs}ms`);
+          }
+        } catch (error) {
+          hasFailure = true;
+          const message = (error as Error).message ?? "unknown error";
+          traces[i] = {
+            stepId: mapDef.step.id,
+            stepName: mapDef.step.id,
+            status: "failed",
+            durationMs: Date.now() - stepStart,
+            attempts: [],
+            inputSnapshot: item,
+            outputSnapshot: undefined,
+          };
+          results[i] = null;
+
+          if (options.verbose) {
+            console.log(`✗ ${message.slice(0, 100)}`);
+          }
         }
       });
 
-      await Promise.all(batch);
+      await Promise.allSettled(batch);
+    }
+
+    if (hasFailure) {
+      const failed = traces.filter((t) => t.status === "failed").length;
+      throw new PartialMapError(
+        `map "${mapDef.step.id}": ${failed}/${items.length} items failed`,
+        traces,
+      );
     }
 
     // Store map results as array keyed by step id
