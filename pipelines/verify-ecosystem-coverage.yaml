@@ -1,0 +1,59 @@
+# Pipeline: verify-ecosystem-coverage
+# Verify ClaudeFlow has the right features from the deep research analysis.
+# Checks each category: orchestration, SWE agents, optimization, security, research, observability.
+#
+# Run: npx tsx examples/run-pipeline.ts verify-ecosystem-coverage
+
+name: verify-ecosystem-coverage
+description: Verify ClaudeFlow covers all key capabilities from the ecosystem research
+version: "1.0.0"
+
+steps:
+  - id: audit-features
+    prompt: |
+      Read the ClaudeFlow source code in src/ and the pipeline templates in pipelines/.
+
+      Check if ClaudeFlow has these capabilities (from ecosystem research):
+
+      ORCHESTRATION:
+      - Pipeline composition (steps, control flow) → check src/core/pipeline.ts
+      - YAML-driven workflows → check src/loader/yaml.ts
+      - Memory/state across runs → check src/memory/
+      - Checkpointing/resume → check src/memory/checkpoint.ts
+
+      SWE AGENT CAPABILITIES:
+      - Code reading/writing → check tool adapters in src/tools/
+      - Test running/validation → check ShellTool
+      - GitHub integration (issues, PRs) → check GitHubTool
+      - Git operations → available via ShellTool
+
+      OPTIMIZATION (autoresearch pattern):
+      - Metric-driven loops → check src/control/optimize.ts
+      - Keep/discard logic → check pipeline.ts optimize execution
+      - Baseline measurement → check optimize node
+
+      EVALUATION:
+      - Static validation → check src/testing/validate.ts
+      - Benchmarking → check src/testing/benchmark.ts
+      - Cost prediction → check src/analyzer/
+
+      SECURITY:
+      - Security audit pipeline → check pipelines/security-audit.yaml
+      - Budget controls → check CLI runtime --max-turns, --max-budget-usd
+      - Permission modes → check CLI runtime --permission-mode
+
+      OBSERVABILITY:
+      - Full traces → check src/observability/trace.ts
+      - Per-step timing/tokens/cost → check pipeline executor
+      - Verbose terminal output → check pipeline.ts verbose mode
+
+      TOOL ECOSYSTEM:
+      - Shell commands → check src/tools/shell.ts
+      - File operations → check src/tools/file.ts
+      - GitHub API → check src/tools/github.ts
+      - Metric extraction → check src/tools/eval.ts
+      - MCP support → check CLI runtime --mcp-config flag
+
+      For each capability, report: PRESENT / PARTIAL / MISSING with the file:line.
+    # No strict output schema — let Claude format freely
+    # The trace captures the full response for review

@@ -1,0 +1,23 @@
+{
+  "runId": "chAGMBF9hcsifWJ11JWl1",
+  "pipelineName": "verify-ecosystem-coverage",
+  "status": "failed",
+  "startedAt": "2026-04-12T14:40:21.976Z",
+  "finishedAt": "2026-04-12T14:42:33.196Z",
+  "totalDurationMs": 131220,
+  "totalTokens": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "totalCostUsd": 0,
+  "steps": [
+    {
+      "stepId": "audit-features",
+      "stepName": "audit-features",
+      "status": "failed",
+      "durationMs": 0,
+      "attempts": [],
+      "inputSnapshot": {}
+    }
+  ]
+}

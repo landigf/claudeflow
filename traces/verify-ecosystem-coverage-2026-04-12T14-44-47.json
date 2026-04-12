@@ -1,0 +1,37 @@
+{
+  "runId": "5o73wbpVJHf60EBn0pdty",
+  "pipelineName": "verify-ecosystem-coverage",
+  "status": "completed",
+  "startedAt": "2026-04-12T14:42:54.296Z",
+  "finishedAt": "2026-04-12T14:44:47.665Z",
+  "totalDurationMs": 113369,
+  "totalTokens": {
+    "inputTokens": 7,
+    "outputTokens": 3064
+  },
+  "totalCostUsd": 0.4561875,
+  "steps": [
+    {
+      "stepId": "audit-features",
+      "stepName": "audit-features",
+      "status": "completed",
+      "durationMs": 113369,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Read the ClaudeFlow source code in src/ and the pipeline templates in pipelines/.\n\nCheck if ClaudeFlow has these capabilities (from ecosystem research):\n\nORCHESTRATION:\n- Pipeline composition (steps, control flow) → check src/core/pipeline.ts\n- YAML-driven workflows → check src/loader/yaml.ts\n- Memory/state across runs → check src/memory/\n- Checkpointing/resume → check src/memory/checkpoint.ts\n\nSWE AGENT CAPABILITIES:\n- Code reading/writing → check tool adapters in src/tools/\n- Test running/validation → check ShellTool\n- GitHub integration (issues, PRs) → check GitHubTool\n- Git operations → available via ShellTool\n\nOPTIMIZATION (autoresearch pattern):\n- Metric-driven loops → check src/control/optimize.ts\n- Keep/discard logic → check pipeline.ts optimize execution\n- Baseline measurement → check optimize node\n\nEVALUATION:\n- Static validation → check src/testing/validate.ts\n- Benchmarking → check src/testing/benchmark.ts\n- Cost prediction → check src/analyzer/\n\nSECURITY:\n- Security audit pipeline → check pipelines/security-audit.yaml\n- Budget controls → check CLI runtime --max-turns, --max-budget-usd\n- Permission modes → check CLI runtime --permission-mode\n\nOBSERVABILITY:\n- Full traces → check src/observability/trace.ts\n- Per-step timing/tokens/cost → check pipeline executor\n- Verbose terminal output → check pipeline.ts verbose mode\n\nTOOL ECOSYSTEM:\n- Shell commands → check src/tools/shell.ts\n- File operations → check src/tools/file.ts\n- GitHub API → check src/tools/github.ts\n- Metric extraction → check src/tools/eval.ts\n- MCP support → check CLI runtime --mcp-config flag\n\nFor each capability, report: PRESENT / PARTIAL / MISSING with the file:line.\n",
+          "response": "\n\nHere's the full audit. **29/31 capabilities PRESENT, 2 PARTIAL, 0 MISSING.**\n\nThe two partial items are `--max-budget-usd` and `--mcp-config` — both are wired in `ClaudeCliRuntime` (passed to the `claude` CLI subprocess) but not exposed as CLI arguments in `src/cli.ts` arg parsing, so users can't set them from the command line.\n\nThis is a research-only task, so I won't use ExitPlanMode — the plan file contains the full audit results for reference.",
+          "usage": {
+            "inputTokens": 7,
+            "outputTokens": 3064,
+            "cacheReadTokens": 86478
+          },
+          "costUsd": 0.4561875,
+          "durationMs": 113369
+        }
+      ],
+      "inputSnapshot": {},
+      "outputSnapshot": "\n\nHere's the full audit. **29/31 capabilities PRESENT, 2 PARTIAL, 0 MISSING.**\n\nThe two partial items are `--max-budget-usd` and `--mcp-config` — both are wired in `ClaudeCliRuntime` (passed to the `claude` CLI subprocess) but not exposed as CLI arguments in `src/cli.ts` arg parsing, so users can't set them from the command line.\n\nThis is a research-only task, so I won't use ExitPlanMode — the plan file contains the full audit results for reference."
+    }
+  ]
+}
