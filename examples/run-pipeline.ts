@@ -56,7 +56,11 @@ const runtime = new ClaudeCliRuntime({
   defaultTimeoutMs: 300_000,
 });
 
-const result = await p.run({}, { runtime, verbose: true });
+// Register tool adapters
+const { createToolRegistry } = await import("../src/tools/index.js");
+const tools = createToolRegistry();
+
+const result = await p.run({}, { runtime, verbose: true, tools });
 
 // Step 3: Save trace
 const traceName = `${p.name}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;

@@ -1,0 +1,23 @@
+{
+  "runId": "XH_LgQUFhbByYpNgVOM9P",
+  "pipelineName": "claudeflow-quality-gate",
+  "status": "failed",
+  "startedAt": "2026-04-12T14:37:32.125Z",
+  "finishedAt": "2026-04-12T14:37:32.125Z",
+  "totalDurationMs": 0,
+  "totalTokens": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "totalCostUsd": 0,
+  "steps": [
+    {
+      "stepId": "tool:typecheck",
+      "stepName": "tool:typecheck",
+      "status": "failed",
+      "durationMs": 0,
+      "attempts": [],
+      "inputSnapshot": {}
+    }
+  ]
+}

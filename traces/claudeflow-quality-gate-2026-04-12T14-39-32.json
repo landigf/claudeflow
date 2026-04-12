@@ -1,0 +1,92 @@
+{
+  "runId": "N0wRZMgUt6scy3wFl3FK2",
+  "pipelineName": "claudeflow-quality-gate",
+  "status": "completed",
+  "startedAt": "2026-04-12T14:38:14.018Z",
+  "finishedAt": "2026-04-12T14:39:32.404Z",
+  "totalDurationMs": 78386,
+  "totalTokens": {
+    "inputTokens": 5,
+    "outputTokens": 600
+  },
+  "totalCostUsd": 0.251627,
+  "steps": [
+    {
+      "stepId": "typecheck",
+      "stepName": "shell.run",
+      "status": "completed",
+      "durationMs": 725,
+      "attempts": [],
+      "inputSnapshot": {
+        "command": "npx tsc --noEmit 2>&1",
+        "timeout": 60000
+      },
+      "outputSnapshot": {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0,
+        "timedOut": false
+      }
+    },
+    {
+      "stepId": "tests",
+      "stepName": "shell.run",
+      "status": "completed",
+      "durationMs": 838,
+      "attempts": [],
+      "inputSnapshot": {
+        "command": "npx vitest run 2>&1",
+        "timeout": 120000
+      },
+      "outputSnapshot": {
+        "stdout": "RUN  v3.2.4 /Users/landigf/Desktop/Code/claudeflow\n\n ✓ test/testing/testing.test.ts (7 tests) 5ms\n ✓ test/analyzer/analyzer.test.ts (8 tests) 5ms\n ✓ test/memory/memory.test.ts (11 tests) 13ms\n ✓ test/loader/yaml.test.ts (10 tests) 23ms\n ✓ test/tools/tools.test.ts (11 tests) 38ms\n ✓ test/core/pipeline.test.ts (14 tests) 43ms\n\n Test Files  6 passed (6)\n      Tests  61 passed (61)\n   Start at  16:38:15\n   Duration  433ms (transform 358ms, setup 0ms, collect 1.19s, tests 127ms, environment 1ms, prepare 315ms)",
+        "stderr": "",
+        "exitCode": 0,
+        "timedOut": false
+      }
+    },
+    {
+      "stepId": "review",
+      "stepName": "review",
+      "status": "completed",
+      "durationMs": 76822,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "You are reviewing the ClaudeFlow project for release readiness.\n\nTypeScript check result: \nTest results: RUN  v3.2.4 /Users/landigf/Desktop/Code/claudeflow\n\n ✓ test/testing/testing.test.ts (7 tests) 5ms\n ✓ test/analyzer/analyzer.test.ts (8 tests) 5ms\n ✓ test/memory/memory.test.ts (11 tests) 13ms\n ✓ test/loader/yaml.test.ts (10 tests) 23ms\n ✓ test/tools/tools.test.ts (11 tests) 38ms\n ✓ test/core/pipeline.test.ts (14 tests) 43ms\n\n Test Files  6 passed (6)\n      Tests  61 passed (61)\n   Start at  16:38:15\n   Duration  433ms (transform 358ms, setup 0ms, collect 1.19s, tests 127ms, environment 1ms, prepare 315ms)\n\nRead CLAUDE.md and verify every claim matches the actual code.\nCheck: are all 6 node types documented? Are all tools listed?\nCheck: does package.json have correct exports and bin field?\n\nReport:\n- Types: pass/fail\n- Tests: pass/fail (count)\n- Docs accuracy: score 1-10\n- Export correctness: pass/fail\n- Overall: ready/not ready\n",
+          "response": "```json\n{\n  \"types_pass\": true,\n  \"tests_pass\": true,\n  \"test_count\": 61,\n  \"docs_score\": 10,\n  \"exports_ok\": true,\n  \"ready\": true,\n  \"issues\": []\n}\n```",
+          "usage": {
+            "inputTokens": 5,
+            "outputTokens": 600,
+            "cacheReadTokens": 51500
+          },
+          "costUsd": 0.251627,
+          "durationMs": 76822
+        }
+      ],
+      "inputSnapshot": {
+        "typecheck": {
+          "stdout": "",
+          "stderr": "",
+          "exitCode": 0,
+          "timedOut": false
+        },
+        "tests": {
+          "stdout": "RUN  v3.2.4 /Users/landigf/Desktop/Code/claudeflow\n\n ✓ test/testing/testing.test.ts (7 tests) 5ms\n ✓ test/analyzer/analyzer.test.ts (8 tests) 5ms\n ✓ test/memory/memory.test.ts (11 tests) 13ms\n ✓ test/loader/yaml.test.ts (10 tests) 23ms\n ✓ test/tools/tools.test.ts (11 tests) 38ms\n ✓ test/core/pipeline.test.ts (14 tests) 43ms\n\n Test Files  6 passed (6)\n      Tests  61 passed (61)\n   Start at  16:38:15\n   Duration  433ms (transform 358ms, setup 0ms, collect 1.19s, tests 127ms, environment 1ms, prepare 315ms)",
+          "stderr": "",
+          "exitCode": 0,
+          "timedOut": false
+        }
+      },
+      "outputSnapshot": {
+        "types_pass": true,
+        "tests_pass": true,
+        "test_count": 61,
+        "docs_score": 10,
+        "exports_ok": true,
+        "ready": true,
+        "issues": []
+      }
+    }
+  ]
+}
