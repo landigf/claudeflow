@@ -1,0 +1,60 @@
+# Pipeline: verify-claims
+# Extract every quantitative claim from the paper and cross-check against data.
+# Wrong numbers = instant reject at IMC.
+#
+# Run from the paper directory:
+#   npx tsx examples/run-pipeline.ts verify-claims
+
+name: verify-paper-claims
+description: Extract and verify every number in the paper against actual data
+version: "1.0.0"
+
+steps:
+  - id: extract
+    prompt: |
+      Read the paper source files in this directory.
+
+      Extract EVERY quantitative claim. For each, record:
+      - The exact claim (quote the sentence)
+      - The number(s) stated
+      - Which section it appears in
+      - What data source should verify it
+
+      Examples of claims to find:
+      - "14,570 total requests"
+      - "338.5 MiB transferred"
+      - "22.8× variation in request volume"
+      - "66.5% of bytes are scripts + styles"
+      - Cache hit rates at specific sizes
+      - Any percentages, counts, ratios, medians, means
+
+      List ALL of them. Missing even one wrong number could sink the paper.
+
+  - id: verify
+    prompt: |
+      Claims extracted from the paper:
+      {extract}
+
+      Now read the actual data files:
+      - Look for artifact_snapshot.json, summary files, CSV data
+      - Look for the build script that generates figures
+      - Check any cached results or pre-computed statistics
+
+      For EACH claim, verify:
+      - CORRECT: number matches the data
+      - WRONG: number doesn't match (state what it should be)
+      - UNVERIFIABLE: can't find the source data to check
+
+      This is critical — wrong numbers mean rejection.
+
+  - id: report
+    prompt: |
+      Verification results:
+      {verify}
+
+      Create a final report:
+      1. Total claims checked
+      2. How many correct / wrong / unverifiable
+      3. List of WRONG claims with corrections (highest priority)
+      4. List of UNVERIFIABLE claims (need manual check)
+      5. Confidence level that the paper's numbers are accurate

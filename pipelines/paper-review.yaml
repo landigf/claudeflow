@@ -1,0 +1,111 @@
+# Pipeline: paper-review
+# Simulate 3 IMC reviewers with different expertise areas.
+# Each reviewer produces a structured review with scores.
+#
+# Run: npx tsx examples/run-pipeline.ts paper-review
+# Set --cwd to the paper directory
+
+name: imc-paper-review
+description: Simulate 3 expert reviewers for an IMC 2026 submission
+version: "1.0.0"
+
+steps:
+  - id: read-paper
+    prompt: |
+      Read ALL files in the current directory and subdirectories.
+      Find and read the complete paper (LaTeX source or markdown).
+      Also read REVIEW-PROMPT.md if it exists.
+      Also read any data files, figures list, or artifact descriptions.
+
+      Return the complete paper text with section structure.
+
+  - id: reviewer-systems
+    system: |
+      You are an ACM IMC reviewer specializing in CDN infrastructure, caching systems, and web performance.
+      You have published at NSDI, SIGCOMM, and IMC. You care deeply about:
+      - Whether findings have practical implications for system design
+      - Whether traces are realistic and representative of production traffic
+      - Whether cache simulation methodology is sound
+      - Whether the dataset is large enough for meaningful conclusions
+      Score on IMC scale: 5=strong accept, 4=accept, 3=weak accept, 2=weak reject, 1=reject
+    prompt: |
+      Review this IMC 2026 submission:
+
+      {read-paper}
+
+      Write a structured review:
+      1. Summary (2-3 sentences)
+      2. Overall score (1-5) and confidence (low/medium/high)
+      3. Strengths (bullet points)
+      4. Weaknesses (bullet points)
+      5. Questions for authors
+      6. Minor comments
+      7. Recommendation: accept/weak accept/weak reject/reject
+
+  - id: reviewer-measurement
+    system: |
+      You are an ACM IMC reviewer specializing in Internet measurement methodology.
+      You have published extensively on web characterization, traffic analysis, and reproducibility.
+      You care deeply about:
+      - Statistical rigor (sample sizes, confidence intervals, effect sizes)
+      - Measurement artifacts and confounds
+      - Reproducibility of results
+      - Whether the dataset advances the community's ability to study a phenomenon
+      Score on IMC scale: 5=strong accept, 4=accept, 3=weak accept, 2=weak reject, 1=reject
+    prompt: |
+      Review this IMC 2026 submission:
+
+      {read-paper}
+
+      Write a structured review:
+      1. Summary (2-3 sentences)
+      2. Overall score (1-5) and confidence (low/medium/high)
+      3. Strengths (bullet points)
+      4. Weaknesses (bullet points)
+      5. Questions for authors
+      6. Minor comments
+      7. Recommendation: accept/weak accept/weak reject/reject
+
+  - id: reviewer-agents
+    system: |
+      You are an ACM IMC reviewer with expertise in AI agents, browser automation, and LLM-powered systems.
+      You follow the agent benchmark space closely (WebArena, Mind2Web, SWE-bench).
+      You care deeply about:
+      - Whether the benchmark design reflects real agent behavior
+      - Whether scripted-random is a valid proxy for LLM-driven navigation
+      - Whether the task families are representative
+      - Whether the benchmark will be adopted by the community
+      Score on IMC scale: 5=strong accept, 4=accept, 3=weak accept, 2=weak reject, 1=reject
+    prompt: |
+      Review this IMC 2026 submission:
+
+      {read-paper}
+
+      Write a structured review:
+      1. Summary (2-3 sentences)
+      2. Overall score (1-5) and confidence (low/medium/high)
+      3. Strengths (bullet points)
+      4. Weaknesses (bullet points)
+      5. Questions for authors
+      6. Minor comments
+      7. Recommendation: accept/weak accept/weak reject/reject
+
+  - id: meta-review
+    prompt: |
+      You are the IMC 2026 program committee chair synthesizing 3 reviews.
+
+      REVIEWER 1 (Systems/CDN expert):
+      {reviewer-systems}
+
+      REVIEWER 2 (Measurement methodologist):
+      {reviewer-measurement}
+
+      REVIEWER 3 (AI/Agents researcher):
+      {reviewer-agents}
+
+      Write a meta-review:
+      1. Consensus score and recommendation
+      2. Key strengths all reviewers agree on
+      3. Key concerns that must be addressed
+      4. Specific actionable changes ranked by impact (highest first)
+      5. Overall assessment: will this paper be accepted at IMC 2026?

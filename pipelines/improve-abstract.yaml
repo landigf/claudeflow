@@ -1,0 +1,62 @@
+# Pipeline: improve-abstract
+# Polish the abstract for maximum impact. IMC limit: 200 words.
+# Abstract deadline: April 22 — this is the FIRST thing reviewers read.
+#
+# Run from the paper directory:
+#   npx tsx examples/run-pipeline.ts improve-abstract
+
+name: improve-abstract
+description: Optimize paper abstract for IMC 2026 submission
+version: "1.0.0"
+
+steps:
+  - id: read-current
+    prompt: |
+      Read the paper source and find the current abstract.
+      Also read the introduction to understand the full framing.
+      Return the current abstract text and the key contributions from the intro.
+
+  - id: analyze-weakness
+    prompt: |
+      Current abstract:
+      {read-current}
+
+      Analyze this abstract for IMC 2026:
+      1. Does it clearly state the PROBLEM? (what's missing in the field)
+      2. Does it state the CONTRIBUTION? (what this paper provides)
+      3. Does it give a HEADLINE FINDING? (the one number reviewers will remember)
+      4. Does it make the reader want to read more?
+      5. Is it under 200 words?
+      6. Does it avoid overclaiming? (critical for IMC)
+
+      Rate each dimension 1-5 and explain what's weak.
+
+  - id: rewrite
+    prompt: |
+      Original abstract and weakness analysis:
+      {read-current}
+      {analyze-weakness}
+
+      Write 3 alternative abstracts, each taking a different angle:
+
+      VERSION A: Lead with the GAP (no public traces exist for agent traffic)
+      VERSION B: Lead with the FINDING (size-dependent cache policy crossover)
+      VERSION C: Lead with the ARTIFACT (first benchmark, 100 sessions, 10 tasks, reproducible)
+
+      Each must be:
+      - Under 200 words
+      - Honest (no overclaiming)
+      - Specific (include at least 2 concrete numbers)
+      - End with the key implication for CDN/cache operators
+
+  - id: pick-best
+    prompt: |
+      Three abstract versions:
+      {rewrite}
+
+      For IMC specifically, which version is strongest? Consider:
+      - IMC values measurement and datasets over techniques
+      - IMC reviewers want to know: is this useful for the community?
+      - The abstract must survive a 30-second skim
+
+      Pick the best version. Explain why. Suggest any final tweaks.
