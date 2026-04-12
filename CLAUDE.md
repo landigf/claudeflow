@@ -13,25 +13,37 @@ npm run test && npm run check
 ## Architecture
 
 ```
-src/core/       → Step, Pipeline, Context, Schema (the 4 primitives)
-src/control/    → Loop, Branch, Map (control flow — wired into pipeline executor)
-src/runtime/    → Runtime interface + implementations (CLI, Mock)
+src/core/          → Step, Pipeline, Context, Schema
+src/control/       → Loop, Branch, Map (wired into pipeline executor)
+src/runtime/       → Runtime interface, ClaudeCliRuntime, MockRuntime
+src/analyzer/      → Pre-execution analysis (token/cost/time prediction)
 src/observability/ → Trace types
-src/loader/     → Prompt interpolation
+src/loader/        → YAML parser, prompt interpolation
 ```
 
-Dependencies flow forward: Core → Control → Runtime → Observability.
-Never import backward (e.g., runtime must not import from control).
+Dependencies flow forward: Core → Control → Runtime → Analyzer → Observability.
+
+## What works
+
+- `step()` builder with fluent API, Zod schemas, retry, fallback
+- `pipeline()` executor with step, loop, branch, map nodes
+- `MockRuntime` for zero-token testing
+- `ClaudeCliRuntime` — spawns `claude -p` CLI
+- `loadYaml()` / `parseYamlString()` — YAML pipeline definitions
+- `analyze()` / `formatAnalysis()` — predict tokens, cost, time before running
+- Prompt interpolation with `{variable}` and `{step.field}` syntax
+- Full `PipelineTrace` with per-step timing, tokens, cost
+
+## What's not built yet
+
+- `ClaudeApiRuntime` (Anthropic SDK)
+- Benchmark harness
+- Snapshot test recording/replay
+- CLI binary (`npx claudeflow run pipeline.yaml`)
 
 ## Code style
 
-- Biome for formatting: `npm run format`
+- Biome for formatting
 - TypeScript strict mode
-- No classes unless they need private state — prefer functions and interfaces
-- Zod for all schemas — re-export from `src/core/schema.ts`
-- Immutable data — Context is frozen, StepBuilder returns new instances
-
-## What exists vs what's planned
-
-**Working now:** step, pipeline, loop, branch, map, MockRuntime, ClaudeCliRuntime, prompt interpolation, traces
-**Not yet built:** YAML loader, analyzer (token/cost prediction), ClaudeApiRuntime, benchmark harness
+- Immutable data — Context is frozen, builders return new instances
+- Zod for all schemas
