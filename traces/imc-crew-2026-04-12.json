@@ -1,0 +1,47 @@
+{
+  "runId": "3Ex56PcLwriQ1UxAoDqiL",
+  "pipelineName": "imc-acceptance-crew",
+  "status": "failed",
+  "startedAt": "2026-04-12T16:37:46.203Z",
+  "finishedAt": "2026-04-12T16:43:49.233Z",
+  "totalDurationMs": 363030,
+  "totalTokens": {
+    "inputTokens": 13,
+    "outputTokens": 4166
+  },
+  "totalCostUsd": 0.59114925,
+  "steps": [
+    {
+      "stepId": "imc-chair",
+      "stepName": "imc-chair",
+      "status": "completed",
+      "durationMs": 111350,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Read ALL files in this paper directory. Analyze this IMC 2026 submission.\n\nAs a former PC chair, answer:\n1. Is this paper appropriate for IMC? (yes/no with reasoning)\n2. What is the strongest contribution? Rate it 1-5.\n3. What is the weakest aspect? How to fix it?\n4. If you were assigning reviewers, which 3 expertise areas would you target?\n5. What's the ONE thing that would change this from reject to accept?\n6. Score prediction: what score will this get? (1-5)\n",
+          "response": "The plan file captures the review + prioritized action items. The core message: you have solid infrastructure and writing, but the paper lives or dies on whether you can get real LLM-driven traces collected in the next 10 days. That single addition could move the score from 2.5 to 3.5.",
+          "usage": {
+            "inputTokens": 13,
+            "outputTokens": 4166,
+            "cacheReadTokens": 385606
+          },
+          "costUsd": 0.59114925,
+          "durationMs": 111350
+        }
+      ],
+      "inputSnapshot": {},
+      "outputSnapshot": "The plan file captures the review + prioritized action items. The core message: you have solid infrastructure and writing, but the paper lives or dies on whether you can get real LLM-driven traces collected in the next 10 days. That single addition could move the score from 2.5 to 3.5."
+    },
+    {
+      "stepId": "cdn-expert",
+      "stepName": "cdn-expert",
+      "status": "failed",
+      "durationMs": 0,
+      "attempts": [],
+      "inputSnapshot": {
+        "imc-chair": "The plan file captures the review + prioritized action items. The core message: you have solid infrastructure and writing, but the paper lives or dies on whether you can get real LLM-driven traces collected in the next 10 days. That single addition could move the score from 2.5 to 3.5."
+      }
+    }
+  ]
+}

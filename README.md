@@ -164,7 +164,13 @@ src/loader/     → YAML parser, prompt interpolation
 src/testing/    → validate(), benchmark()
 ```
 
-See `docs/PIPELINE_IDEAS.md` for 20+ real-world pipeline examples.
+## Documentation
+
+- **[Cookbook](docs/COOKBOOK.md)** — 17 practical recipes: code review, bug fixing, overnight optimization, multi-agent crews, paper review, checkpointing, and more
+- **[Pipeline Ideas](docs/PIPELINE_IDEAS.md)** — 20+ real-world pipeline templates for every use case
+- **[Benchmark](docs/BENCHMARK.md)** — ClaudeFlow vs raw Claude CLI comparison with real data
+- **[CLAUDE.md](CLAUDE.md)** — Instructions for AI agents working on this codebase
+- **[AGENTS.md](AGENTS.md)** — Universal agent instructions (works with Cursor, Copilot, etc.)
 
 ## License
 

@@ -435,6 +435,78 @@ Memory is just JSON files in `.claudeflow/memory/` — git-friendly, inspectable
 
 ---
 
+## 16. Overnight Multi-Agent Crew with Checkpointing
+
+**When:** You have a complex job (like an 8-agent paper review) that takes hours and might crash partway through.
+
+```typescript
+import { pipeline, step, ClaudeCliRuntime, CheckpointManager, MemoryStore } from "claudeflow";
+
+const checkpoint = new CheckpointManager(".claudeflow/checkpoints");
+const memory = new MemoryStore(".claudeflow/memory");
+
+const crew = pipeline("overnight-review")
+  .step(step("agent-1").system("You are a systems expert...").prompt("Review: {paper}"))
+  .step(step("agent-2").system("You are a methodology expert...").prompt("Review: {paper}\nPrevious: {agent-1}"))
+  .step(step("agent-3").system("You are an AI researcher...").prompt("Review based on: {agent-1} {agent-2}"))
+  // ... more agents
+  .step(step("meta-review").prompt("Synthesize all reviews: {agent-1} {agent-2} {agent-3}"));
+
+// Run 1: crashes at agent-5 (timeout, rate limit, etc.)
+await crew.run({ paper: "..." }, { runtime, checkpoint, memory });
+// Checkpoint saved after each agent ✓
+
+// Run 2: automatically resumes from agent-5, doesn't re-run 1-4
+await crew.run({ paper: "..." }, { runtime, checkpoint, memory });
+// Uses checkpoint to skip completed agents ✓
+// Memory carries over insights from previous runs ✓
+```
+
+**Why this matters:** A 30-minute, 8-agent pipeline that crashes at agent 6 would cost ~$4 to restart from scratch. With checkpointing, you only pay for agent 6-8 (~$1.50). Memory means tomorrow's crew knows what yesterday's crew found.
+
+**Real example:** Our IMC 2026 paper review uses an 8-expert crew. Each run produces a trace file with every reviewer's feedback. When one agent times out, the next run resumes from the checkpoint.
+
+---
+
+## 17. Iterative Paper Improvement (Academic Workflow)
+
+**When:** You're preparing a paper for submission and want structured, multi-expert review.
+
+```yaml
+name: paper-review-crew
+steps:
+  - id: read-paper
+    prompt: "Read all files in this directory. Summarize the paper."
+
+  - id: reviewer-1
+    system: "You are a senior researcher in systems/infrastructure..."
+    prompt: "Review this paper. Score 1-5. List strengths, weaknesses, questions."
+
+  - id: reviewer-2
+    system: "You are a measurement methodology expert..."
+    prompt: "Review focusing on statistics and rigor. Previous review: {reviewer-1}"
+
+  - id: meta-review
+    prompt: "Synthesize reviews. Score, mandatory fixes, action plan."
+```
+
+Run iteratively:
+```bash
+# Round 1: identify issues
+npx claudeflow run pipelines/paper-review.yaml --cwd /path/to/paper --verbose
+
+# Fix issues in the paper...
+
+# Round 2: verify improvements
+npx claudeflow run pipelines/paper-review.yaml --cwd /path/to/paper --verbose
+
+# Repeat until score >= 4
+```
+
+Each round produces a trace — you can track score improvement over time.
+
+---
+
 ## When to Use What — Decision Guide
 
 ```

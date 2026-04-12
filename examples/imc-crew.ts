@@ -28,7 +28,7 @@ console.log("");
 const runtime = new ClaudeCliRuntime({
   cwd: PAPER_DIR,
   permissionMode: "plan",
-  defaultTimeoutMs: 300_000,
+  defaultTimeoutMs: 600_000, // 10 min per agent (they need to read full paper + prior reviews)
 });
 
 const tools = createToolRegistry();
