@@ -11,6 +11,10 @@ export { map } from "./control/map.js";
 // Loader
 export { loadYaml, parseYamlString } from "./loader/yaml.js";
 
+// Analyzer
+export { analyze, formatAnalysis } from "./analyzer/index.js";
+export type { PipelineAnalysis } from "./analyzer/index.js";
+
 // Runtime
 export { MockRuntime } from "./runtime/mock.js";
 export { ClaudeCliRuntime } from "./runtime/cli.js";
