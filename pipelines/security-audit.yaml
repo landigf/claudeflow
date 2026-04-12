@@ -1,59 +1,101 @@
 # Pipeline: security-audit
-# Run security checks on any project using common open-source tools.
-# Composes Semgrep-style pattern checks + secret scanning + dependency audit.
+# Compose real security tools: Semgrep + Trivy + Gitleaks + npm audit.
+# Each tool runs as a deterministic shell step. Claude analyzes the combined output.
+# Falls back gracefully if a tool isn't installed.
 #
 # Run: npx claudeflow run pipelines/security-audit.yaml --cwd /path/to/project --verbose
+# Prerequisites: install tools you want (all optional, fallbacks exist)
+#   brew install semgrep trivy gitleaks  (macOS)
+#   pip install semgrep                  (any platform)
 
 name: security-audit
-description: Check a codebase for security issues — secrets, vulnerabilities, code patterns
-version: "1.0.0"
+description: Security scan using Semgrep + Trivy + Gitleaks + dependency audit
+version: "2.0.0"
 
 steps:
+  # Static analysis with Semgrep (or grep fallback)
+  - id: static-analysis
+    tool: shell
+    action: run
+    params:
+      command: |
+        if command -v semgrep &>/dev/null; then
+          semgrep scan --config auto --json --quiet . 2>/dev/null | head -200
+        else
+          echo '{"fallback": true, "tool": "grep"}'
+          grep -rn 'eval(\|exec(\|innerHTML\|dangerouslySetInnerHTML\|__proto__\|constructor.prototype' --include='*.ts' --include='*.js' --include='*.py' . 2>/dev/null | grep -v node_modules | grep -v '.git' | head -30 || echo 'No dangerous patterns found'
+        fi
+      timeout: 120000
+
+  # Secret scanning with Gitleaks (or grep fallback)
   - id: secrets
     tool: shell
     action: run
     params:
-      command: "grep -rn 'password\\|secret\\|api_key\\|token' --include='*.ts' --include='*.js' --include='*.py' --include='*.yaml' --include='*.json' . | grep -v node_modules | grep -v '.git' | head -20 || echo 'No secrets found'"
-      timeout: 30000
-
-  - id: deps
-    tool: shell
-    action: run
-    params:
-      command: "npm audit --json 2>/dev/null | head -50 || pip-audit 2>/dev/null | head -20 || echo 'No package manager audit available'"
+      command: |
+        if command -v gitleaks &>/dev/null; then
+          gitleaks detect --source . --no-git --report-format json 2>/dev/null | head -100
+        else
+          echo '{"fallback": true, "tool": "grep"}'
+          grep -rn 'password\s*=\|api_key\s*=\|secret\s*=\|token\s*=' --include='*.ts' --include='*.js' --include='*.py' --include='*.env*' . 2>/dev/null | grep -v node_modules | grep -v '.git' | grep -vi 'example\|test\|mock\|sample' | head -20 || echo 'No secrets found'
+        fi
       timeout: 60000
 
-  - id: env-files
+  # Container/dependency scanning with Trivy (or npm/pip audit fallback)
+  - id: dependency-scan
     tool: shell
     action: run
     params:
-      command: "find . -name '.env' -o -name '.env.*' -o -name 'credentials*' -o -name '*secret*' | grep -v node_modules | grep -v .git || echo 'No env files found'"
+      command: |
+        if command -v trivy &>/dev/null; then
+          trivy fs --scanners vuln --format json --quiet . 2>/dev/null | head -200
+        elif [ -f package.json ]; then
+          npm audit --json 2>/dev/null | head -100 || echo '{"fallback": true}'
+        elif [ -f requirements.txt ]; then
+          pip-audit 2>/dev/null | head -50 || echo 'pip-audit not available'
+        else
+          echo 'No dependency manager found'
+        fi
+      timeout: 120000
+
+  # Sensitive file detection
+  - id: sensitive-files
+    tool: shell
+    action: run
+    params:
+      command: |
+        echo "=== .env files ==="
+        find . -maxdepth 3 -name '.env' -o -name '.env.*' -o -name '*.pem' -o -name '*.key' -o -name 'credentials*' 2>/dev/null | grep -v node_modules | grep -v .git || echo 'None found'
+        echo "=== .gitignore check ==="
+        if [ -f .gitignore ]; then
+          grep -c '.env\|secret\|credential\|\.key\|\.pem' .gitignore || echo '0 security patterns in .gitignore'
+        else
+          echo 'WARNING: No .gitignore file!'
+        fi
       timeout: 10000
 
+  # Claude analyzes all results
   - id: analyze
     prompt: |
-      Security scan results for this project:
+      You are a security expert reviewing scan results for a software project.
 
-      Secret patterns found:
+      STATIC ANALYSIS (Semgrep/grep):
+      {static-analysis.stdout}
+
+      SECRET SCANNING (Gitleaks/grep):
       {secrets.stdout}
 
-      Dependency audit:
-      {deps.stdout}
+      DEPENDENCY VULNERABILITIES (Trivy/npm audit):
+      {dependency-scan.stdout}
 
-      Sensitive files:
-      {env-files.stdout}
+      SENSITIVE FILES:
+      {sensitive-files.stdout}
 
-      Analyze these findings:
-      1. Which are real security issues vs false positives?
-      2. Rate severity: critical / high / medium / low / info
-      3. Recommend specific fixes for each real issue
-      4. Overall security grade: A (excellent) to F (critical issues)
-    output:
-      grade: string
-      real_issues:
-        type: array
-        items: string
-      false_positives: number
-      recommendations:
-        type: array
-        items: string
+      Analyze ALL findings:
+      1. Separate real issues from false positives
+      2. Rate each real issue: CRITICAL / HIGH / MEDIUM / LOW
+      3. For each: what file, what's wrong, how to fix
+      4. Overall security grade: A (excellent) to F (critical gaps)
+      5. Top 3 most urgent fixes
+
+      Be specific — reference actual file paths and patterns found.

@@ -12,18 +12,24 @@ export { ShellTool } from "./shell.js";
 export { GitHubTool } from "./github.js";
 export { FileTool } from "./file.js";
 export { EvalTool } from "./eval.js";
+export { PromptfooTool } from "./promptfoo.js";
+export { DspyTool } from "./dspy.js";
 
 import { ShellTool } from "./shell.js";
 import { GitHubTool } from "./github.js";
 import { FileTool } from "./file.js";
 import { EvalTool } from "./eval.js";
+import { PromptfooTool } from "./promptfoo.js";
+import { DspyTool } from "./dspy.js";
 
-/** Create a registry of built-in tools */
+/** Create a registry of all built-in tools */
 export function createToolRegistry(): Map<string, ToolAdapter> {
   const registry = new Map<string, ToolAdapter>();
   registry.set("shell", new ShellTool());
   registry.set("github", new GitHubTool());
   registry.set("file", new FileTool());
   registry.set("eval", new EvalTool());
+  registry.set("promptfoo", new PromptfooTool());
+  registry.set("dspy", new DspyTool());
   return registry;
 }
