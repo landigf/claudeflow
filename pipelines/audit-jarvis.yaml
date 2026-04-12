@@ -1,0 +1,88 @@
+# Pipeline: audit-jarvis
+# Use ClaudeFlow to audit the Jarvis JMCP project and fix bugs.
+#
+# Run: npx tsx examples/run-pipeline.ts audit-jarvis
+#
+# This pipeline reads the Jarvis codebase, finds bugs and issues,
+# fixes the most critical one, and verifies tests pass.
+
+name: audit-jarvis
+description: Audit the Jarvis JMCP codebase for bugs and reliability issues
+version: "1.0.0"
+
+steps:
+  - id: read-logs
+    prompt: |
+      Read the recent Jarvis control-plane logs and bridge logs.
+      Check for errors, warnings, and patterns of failure.
+
+      Look at:
+      - The Telegram bot handling (are messages being processed?)
+      - The bridge executor (are tasks completing?)
+      - The self-repair system (is it triggering?)
+      - GitHub API calls (are they working?)
+
+      Also read the recent kernel_turns from the database to see
+      what the user has been asking and what failed.
+
+      Report every issue you find with severity (critical/high/medium/low).
+    output:
+      issues:
+        type: array
+        items: string
+      critical_count: number
+
+  - id: audit-code
+    prompt: |
+      Read the Jarvis control-plane source code:
+      - services/control-plane/src/telegram.ts (Telegram bot)
+      - services/control-plane/src/service.ts (core service)
+      - services/control-plane/src/server.ts (startup)
+      - services/local-bridge/src/executor.ts (bridge executor)
+
+      Focus on:
+      1. Error handling — what crashes silently?
+      2. Edge cases — what inputs would break it?
+      3. The self-repair system — does it actually work?
+      4. Telegram message routing — anything being swallowed?
+      5. Bridge execution — path resolution, auth, timeouts
+
+      Also check the issues found in logs: {read-logs.issues}
+
+      List the top 5 bugs or reliability issues with exact file:line references.
+    output:
+      bugs:
+        type: array
+        items: string
+      most_critical: string
+
+  - id: fix
+    prompt: |
+      Fix this critical bug in Jarvis:
+      {audit-code.most_critical}
+
+      Make the actual code change. Keep it minimal and focused.
+      Run `npm run check` to verify types.
+      Do NOT break existing functionality.
+    tools: [Read, Write, Edit, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 300000
+
+  - id: verify
+    prompt: |
+      Run the Jarvis test suite and type checker:
+      ```
+      npm run test && npm run check
+      ```
+
+      Report:
+      - Do all tests pass?
+      - Any type errors?
+      - What was changed and why?
+    tools: [Bash, Read]
+    output:
+      tests_pass: boolean
+      changes: string
