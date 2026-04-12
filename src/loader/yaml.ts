@@ -50,7 +50,12 @@ type YamlSchemaField =
  *   const result = await pipeline.run(input, { runtime });
  */
 export function loadYaml(filePath: string): PipelineDef {
-  const raw = readFileSync(filePath, "utf-8");
+  let raw: string;
+  try {
+    raw = readFileSync(filePath, "utf-8");
+  } catch (error) {
+    throw new Error(`Failed to read pipeline file "${filePath}": ${(error as Error).message}`);
+  }
   return parseYamlString(raw);
 }
 
