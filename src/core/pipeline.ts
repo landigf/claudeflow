@@ -20,6 +20,10 @@ class PartialMapError extends Error {
 export interface PipelineRunOptions {
   runtime: Runtime;
   verbose?: boolean;
+  /** Memory store for cross-run persistence */
+  memory?: import("../memory/store.js").MemoryStore;
+  /** Checkpoint manager for resumable pipelines */
+  checkpoint?: import("../memory/checkpoint.js").CheckpointManager;
   onStepStart?: (stepId: string, ctx: Context) => void;
   onStepEnd?: (stepId: string, trace: StepTrace) => void;
   onRetry?: (stepId: string, attempt: number, error: string) => void;
@@ -67,25 +71,68 @@ export class PipelineDef {
   }
 
   async run(input: unknown, options: PipelineRunOptions): Promise<PipelineResult> {
-    const runId = nanoid();
+    let startIndex = 0;
+    let runId = nanoid();
     const startedAt = new Date();
     let ctx = createContext(input, runId, this.name);
     const stepTraces: StepTrace[] = [];
     let pipelineStatus: PipelineTrace["status"] = "completed";
 
-    if (options.verbose) {
+    // Check for existing checkpoint to resume from
+    if (options.checkpoint) {
+      const existing = options.checkpoint.load(this.name);
+      if (existing) {
+        runId = existing.runId;
+        startIndex = existing.completedStepIndex + 1;
+        ctx = createContext(existing.input, runId, this.name);
+        // Rebuild context state from checkpoint
+        for (const [key, value] of Object.entries(existing.contextState)) {
+          ctx = advanceContext(ctx, key, value);
+        }
+        stepTraces.push(...existing.completedTraces);
+        if (options.verbose) {
+          console.log(`[claudeflow] Resuming from step ${startIndex + 1}/${this.nodes.length} (checkpoint: ${runId.slice(0, 8)})`);
+        }
+      }
+    }
+
+    // Inject memory into context if available
+    if (options.memory) {
+      const memories = options.memory.all();
+      if (Object.keys(memories).length > 0) {
+        ctx = advanceContext(ctx, "_memory", memories);
+      }
+    }
+
+    if (options.verbose && startIndex === 0) {
       console.log(`[claudeflow] ${this.name}`);
       console.log(`[claudeflow] Runtime: ${options.runtime.constructor.name}`);
+      if (options.memory) console.log(`[claudeflow] Memory: ${options.memory.keys().length} entries loaded`);
+      if (options.checkpoint) console.log(`[claudeflow] Checkpointing enabled`);
       console.log("");
     }
 
-    for (let i = 0; i < this.nodes.length; i++) {
+    for (let i = startIndex; i < this.nodes.length; i++) {
       const node = this.nodes[i];
 
       try {
         const result = await this.#executeNode(node, ctx, options, i);
         stepTraces.push(...result.traces);
         ctx = result.ctx;
+
+        // Save checkpoint after each successful step
+        if (options.checkpoint) {
+          options.checkpoint.save(runId, {
+            runId,
+            pipelineName: this.name,
+            status: "in_progress",
+            completedStepIndex: i,
+            contextState: { ...ctx.state },
+            input,
+            completedTraces: [...stepTraces],
+            createdAt: new Date().toISOString(),
+          });
+        }
       } catch (error) {
         if (error instanceof PartialMapError) {
           stepTraces.push(...error.traces);
@@ -104,6 +151,10 @@ export class PipelineDef {
             outputSnapshot: undefined,
           });
           pipelineStatus = "failed";
+        }
+        // Save failure checkpoint so we can resume
+        if (options.checkpoint) {
+          options.checkpoint.fail(runId, (error as Error).message);
         }
         if (options.verbose) {
           console.log(`  ✗ ${(error as Error).message?.slice(0, 100)}`);
@@ -126,6 +177,11 @@ export class PipelineDef {
       totalCostUsd: totalCost,
       steps: stepTraces,
     };
+
+    // Mark checkpoint completed
+    if (options.checkpoint && pipelineStatus === "completed") {
+      options.checkpoint.complete(runId);
+    }
 
     if (options.verbose) {
       console.log("");
