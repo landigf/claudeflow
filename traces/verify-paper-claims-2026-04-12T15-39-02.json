@@ -1,0 +1,23 @@
+{
+  "runId": "IxfZMU0aNPeizdCnTzWUs",
+  "pipelineName": "verify-paper-claims",
+  "status": "failed",
+  "startedAt": "2026-04-12T15:34:02.058Z",
+  "finishedAt": "2026-04-12T15:39:02.066Z",
+  "totalDurationMs": 300008,
+  "totalTokens": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "totalCostUsd": 0,
+  "steps": [
+    {
+      "stepId": "extract",
+      "stepName": "extract",
+      "status": "failed",
+      "durationMs": 0,
+      "attempts": [],
+      "inputSnapshot": {}
+    }
+  ]
+}
