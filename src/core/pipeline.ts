@@ -7,6 +7,8 @@ import type { StepDef } from "./step.js";
 import type { LoopDef } from "../control/loop.js";
 import type { BranchDef } from "../control/branch.js";
 import type { MapDef } from "../control/map.js";
+import type { OptimizeDef } from "../control/optimize.js";
+import type { ToolAdapter } from "../tools/index.js";
 
 class PartialMapError extends Error {
   constructor(
@@ -24,6 +26,8 @@ export interface PipelineRunOptions {
   memory?: import("../memory/store.js").MemoryStore;
   /** Checkpoint manager for resumable pipelines */
   checkpoint?: import("../memory/checkpoint.js").CheckpointManager;
+  /** Tool adapters registry */
+  tools?: Map<string, ToolAdapter>;
   onStepStart?: (stepId: string, ctx: Context) => void;
   onStepEnd?: (stepId: string, trace: StepTrace) => void;
   onRetry?: (stepId: string, attempt: number, error: string) => void;
@@ -34,11 +38,20 @@ export interface PipelineResult {
   trace: PipelineTrace;
 }
 
+export interface ToolNode {
+  id: string;
+  adapter: string;
+  action: string;
+  params: Record<string, unknown>;
+}
+
 type PipelineNode =
   | { type: "step"; step: StepDef }
   | { type: "loop"; loop: LoopDef }
   | { type: "branch"; branch: BranchDef }
-  | { type: "map"; map: MapDef };
+  | { type: "map"; map: MapDef }
+  | { type: "tool"; tool: ToolNode }
+  | { type: "optimize"; optimize: OptimizeDef };
 
 export class PipelineDef {
   readonly name: string;
@@ -68,6 +81,16 @@ export class PipelineDef {
   /** Add a map node */
   map(mapDef: MapDef): PipelineDef {
     return new PipelineDef(this.name, [...this.nodes, { type: "map", map: mapDef }]);
+  }
+
+  /** Add a tool node (deterministic, no LLM) */
+  tool(toolNode: ToolNode): PipelineDef {
+    return new PipelineDef(this.name, [...this.nodes, { type: "tool", tool: toolNode }]);
+  }
+
+  /** Add an optimize loop (autoresearch pattern) */
+  optimize(optimizeDef: OptimizeDef): PipelineDef {
+    return new PipelineDef(this.name, [...this.nodes, { type: "optimize", optimize: optimizeDef }]);
   }
 
   async run(input: unknown, options: PipelineRunOptions): Promise<PipelineResult> {
@@ -209,6 +232,10 @@ export class PipelineDef {
         return this.#executeBranchNode(node.branch, ctx, options, nodeIndex);
       case "map":
         return this.#executeMapNode(node.map, ctx, options, nodeIndex);
+      case "tool":
+        return this.#executeToolNode(node.tool, ctx, options, nodeIndex);
+      case "optimize":
+        return this.#executeOptimizeNode(node.optimize, ctx, options, nodeIndex);
     }
   }
 
@@ -383,6 +410,154 @@ export class PipelineDef {
     return { traces, ctx };
   }
 
+  async #executeToolNode(
+    toolNode: ToolNode,
+    ctx: Context,
+    options: PipelineRunOptions,
+    nodeIndex: number,
+  ): Promise<{ traces: StepTrace[]; ctx: Context }> {
+    const stepStart = Date.now();
+
+    if (options.verbose) {
+      process.stdout.write(`[${nodeIndex + 1}/${this.nodes.length}] tool:${toolNode.adapter}.${toolNode.action} `);
+    }
+
+    const adapter = options.tools?.get(toolNode.adapter);
+    if (!adapter) {
+      throw new Error(`Tool adapter "${toolNode.adapter}" not found. Register it in PipelineRunOptions.tools`);
+    }
+
+    // Interpolate params
+    const allVars = { ...(ctx.input as Record<string, unknown>), ...ctx.state };
+    const interpolatedParams: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(toolNode.params)) {
+      if (typeof value === "string") {
+        interpolatedParams[key] = interpolate(value, allVars);
+      } else {
+        interpolatedParams[key] = value;
+      }
+    }
+
+    const output = await adapter.execute(toolNode.action, interpolatedParams);
+    const durationMs = Date.now() - stepStart;
+
+    if (options.verbose) {
+      console.log(`✓ ${durationMs}ms (deterministic)`);
+    }
+
+    const trace: StepTrace = {
+      stepId: toolNode.id,
+      stepName: `${toolNode.adapter}.${toolNode.action}`,
+      status: "completed",
+      durationMs,
+      attempts: [], // no LLM attempts
+      inputSnapshot: interpolatedParams,
+      outputSnapshot: output,
+    };
+
+    ctx = advanceContext(ctx, toolNode.id, output);
+    return { traces: [trace], ctx };
+  }
+
+  async #executeOptimizeNode(
+    optimizeDef: OptimizeDef,
+    ctx: Context,
+    options: PipelineRunOptions,
+    nodeIndex: number,
+  ): Promise<{ traces: StepTrace[]; ctx: Context }> {
+    const config = optimizeDef.config;
+    const label = config.label ?? "optimize";
+    const traces: StepTrace[] = [];
+
+    if (options.verbose) {
+      console.log(`[${nodeIndex + 1}/${this.nodes.length}] optimize "${label}" (max ${config.maxIterations} iterations, ${config.direction} is better)`);
+    }
+
+    // Get baseline metric
+    const baselineTrace = await this.#executeStep(optimizeDef.evalStep, ctx, options);
+    traces.push(baselineTrace);
+    if (baselineTrace.outputSnapshot) {
+      ctx = advanceContext(ctx, optimizeDef.evalStep.id, baselineTrace.outputSnapshot);
+    }
+
+    const baselineOutput = baselineTrace.outputSnapshot as Record<string, unknown> | undefined;
+    let bestMetric = Number(baselineOutput?.[config.metricKey] ?? 0);
+    ctx = advanceContext(ctx, "_best_metric", bestMetric);
+
+    if (options.verbose) {
+      console.log(`  baseline ${config.metricKey}: ${bestMetric}`);
+    }
+
+    const attempts: Array<{ iteration: number; metric: number; kept: boolean }> = [];
+
+    for (let i = 0; i < config.maxIterations; i++) {
+      if (options.verbose) {
+        process.stdout.write(`  [${i + 1}/${config.maxIterations}] mutate... `);
+      }
+
+      // Mutate
+      const mutateTrace = await this.#executeStep(optimizeDef.mutateStep, ctx, options);
+      traces.push(mutateTrace);
+
+      // Evaluate
+      const evalTrace = await this.#executeStep(optimizeDef.evalStep, ctx, options);
+      traces.push(evalTrace);
+
+      const evalOutput = evalTrace.outputSnapshot as Record<string, unknown> | undefined;
+      const newMetric = Number(evalOutput?.[config.metricKey] ?? 0);
+
+      const isBetter = config.direction === "lower"
+        ? newMetric < bestMetric
+        : newMetric > bestMetric;
+
+      attempts.push({ iteration: i + 1, metric: newMetric, kept: isBetter });
+
+      if (isBetter) {
+        bestMetric = newMetric;
+        ctx = advanceContext(ctx, "_best_metric", bestMetric);
+        ctx = advanceContext(ctx, optimizeDef.evalStep.id, evalOutput);
+        if (options.verbose) {
+          console.log(`✓ ${config.metricKey}: ${newMetric} (improved, keeping)`);
+        }
+        // Save to memory if available
+        if (options.memory) {
+          options.memory.set(`optimize_${label}_best`, { metric: bestMetric, iteration: i + 1 });
+        }
+      } else {
+        if (options.verbose) {
+          console.log(`✗ ${config.metricKey}: ${newMetric} (no improvement, discarding)`);
+        }
+      }
+    }
+
+    // Store optimization results as a summary trace
+    const summary = {
+      bestMetric,
+      totalIterations: attempts.length,
+      keptCount: attempts.filter((a) => a.kept).length,
+      attempts,
+    };
+    ctx = advanceContext(ctx, `${label}_results`, summary);
+
+    // Add a summary trace so result.output captures the optimization results
+    traces.push({
+      stepId: `${label}_summary`,
+      stepName: `optimize:${label}`,
+      status: "completed",
+      durationMs: 0,
+      attempts: [],
+      inputSnapshot: { bestMetric, totalIterations: attempts.length },
+      outputSnapshot: summary,
+    });
+
+    if (options.verbose) {
+      const kept = attempts.filter((a) => a.kept).length;
+      console.log(`  optimize done: ${kept}/${attempts.length} kept, best ${config.metricKey}: ${bestMetric}`);
+    }
+
+    return { traces, ctx };
+  }
+
   async #executeStep(
     stepDef: StepDef,
     ctx: Context,
@@ -516,6 +691,8 @@ function getNodeId(node: PipelineNode): string {
     case "loop": return `loop:${node.loop.step.id}`;
     case "branch": return `branch:${node.branch.trueBranch.id}/${node.branch.falseBranch.id}`;
     case "map": return `map:${node.map.step.id}`;
+    case "tool": return `tool:${node.tool.id}`;
+    case "optimize": return `optimize:${node.optimize.mutateStep.id}`;
   }
 }
 
