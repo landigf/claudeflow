@@ -1,5 +1,6 @@
-import type { StepDef, StepBuilder } from "../core/step.js";
+import type { StepDef } from "../core/step.js";
 import type { Context } from "../core/context.js";
+import { resolveStep } from "./resolve.js";
 
 export interface BranchDef {
   type: "branch";
@@ -10,28 +11,15 @@ export interface BranchDef {
 
 /**
  * Route execution based on a condition.
- *
- * Usage:
- *   branch(
- *     ctx => (ctx.state.classify as { confidence: number }).confidence > 0.8,
- *     { true: publishStep, false: reviewStep }
- *   )
  */
 export function branch(
   predicate: (ctx: Context) => boolean,
-  branches: {
-    true: StepDef | StepBuilder;
-    false: StepDef | StepBuilder;
-  },
+  branches: { true: StepDef | { build(): StepDef }; false: StepDef | { build(): StepDef } },
 ): BranchDef {
-  const resolve = (s: StepDef | StepBuilder): StepDef =>
-    "build" in s && typeof (s as StepBuilder).build === "function"
-      ? (s as StepBuilder).build()
-      : (s as StepDef);
   return {
     type: "branch",
     predicate,
-    trueBranch: resolve(branches.true),
-    falseBranch: resolve(branches.false),
+    trueBranch: resolveStep(branches.true),
+    falseBranch: resolveStep(branches.false),
   };
 }
