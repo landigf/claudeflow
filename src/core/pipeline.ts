@@ -490,6 +490,27 @@ export class PipelineDef {
 
     const attempts: Array<{ iteration: number; metric: number; kept: boolean }> = [];
 
+    // Git isolation: snapshot state before each iteration, revert on discard
+    const useGitIsolation = config.gitIsolation !== false;
+    let lastGoodCommit: string | null = null;
+
+    if (useGitIsolation) {
+      try {
+        const { execSync } = await import("node:child_process");
+        const cwd = process.cwd();
+        // Record current HEAD as the baseline
+        lastGoodCommit = execSync("git rev-parse HEAD", { cwd, encoding: "utf-8" }).trim();
+        if (options.verbose) {
+          console.log(`  git isolation: baseline at ${lastGoodCommit.slice(0, 8)}`);
+        }
+      } catch {
+        // Not a git repo or git not available — skip isolation
+        if (options.verbose) {
+          console.log("  git isolation: not available (not a git repo)");
+        }
+      }
+    }
+
     for (let i = 0; i < config.maxIterations; i++) {
       if (options.verbose) {
         process.stdout.write(`  [${i + 1}/${config.maxIterations}] mutate... `);
@@ -498,6 +519,15 @@ export class PipelineDef {
       // Mutate
       const mutateTrace = await this.#executeStep(optimizeDef.mutateStep, ctx, options);
       traces.push(mutateTrace);
+
+      // Git: commit the mutation so we can revert cleanly
+      if (useGitIsolation && lastGoodCommit) {
+        try {
+          const { execSync } = await import("node:child_process");
+          const cwd = process.cwd();
+          execSync("git add -A && git commit -m 'optimize: experiment' --allow-empty --no-verify 2>/dev/null || true", { cwd, encoding: "utf-8" });
+        } catch { /* ignore */ }
+      }
 
       // Evaluate
       const evalTrace = await this.#executeStep(optimizeDef.evalStep, ctx, options);
@@ -516,16 +546,37 @@ export class PipelineDef {
         bestMetric = newMetric;
         ctx = advanceContext(ctx, "_best_metric", bestMetric);
         ctx = advanceContext(ctx, optimizeDef.evalStep.id, evalOutput);
+        // Update the "good" commit reference
+        if (useGitIsolation) {
+          try {
+            const { execSync } = await import("node:child_process");
+            lastGoodCommit = execSync("git rev-parse HEAD", { cwd: process.cwd(), encoding: "utf-8" }).trim();
+          } catch { /* ignore */ }
+        }
         if (options.verbose) {
           console.log(`✓ ${config.metricKey}: ${newMetric} (improved, keeping)`);
         }
-        // Save to memory if available
         if (options.memory) {
           options.memory.set(`optimize_${label}_best`, { metric: bestMetric, iteration: i + 1 });
         }
       } else {
-        if (options.verbose) {
-          console.log(`✗ ${config.metricKey}: ${newMetric} (no improvement, discarding)`);
+        // Git: revert to last good commit (discard failed experiment)
+        if (useGitIsolation && lastGoodCommit) {
+          try {
+            const { execSync } = await import("node:child_process");
+            execSync(`git reset --hard ${lastGoodCommit}`, { cwd: process.cwd(), encoding: "utf-8" });
+            if (options.verbose) {
+              console.log(`✗ ${config.metricKey}: ${newMetric} (reverted to ${lastGoodCommit.slice(0, 8)})`);
+            }
+          } catch {
+            if (options.verbose) {
+              console.log(`✗ ${config.metricKey}: ${newMetric} (no improvement, git revert failed)`);
+            }
+          }
+        } else {
+          if (options.verbose) {
+            console.log(`✗ ${config.metricKey}: ${newMetric} (no improvement, discarding)`);
+          }
         }
       }
     }

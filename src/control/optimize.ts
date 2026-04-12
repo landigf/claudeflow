@@ -12,6 +12,8 @@ export interface OptimizeConfig {
   timeBudgetMs?: number;
   /** Optional label for verbose output */
   label?: string;
+  /** Enable git isolation: commit before mutate, reset on discard. Default: true */
+  gitIsolation?: boolean;
 }
 
 export interface OptimizeDef {
