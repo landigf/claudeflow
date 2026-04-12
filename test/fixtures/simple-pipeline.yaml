@@ -1,0 +1,20 @@
+name: test-pipeline
+description: A simple pipeline for testing the YAML loader
+version: "1.0.0"
+
+steps:
+  - id: summarize
+    prompt: "Summarize: {url}"
+    output:
+      title: string
+      summary: string
+
+  - id: classify
+    prompt: "Classify: {summarize.summary}"
+    output:
+      category: string
+      confidence: number
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 100

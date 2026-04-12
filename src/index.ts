@@ -8,6 +8,9 @@ export { loop } from "./control/loop.js";
 export { branch } from "./control/branch.js";
 export { map } from "./control/map.js";
 
+// Loader
+export { loadYaml, parseYamlString } from "./loader/yaml.js";
+
 // Runtime
 export { MockRuntime } from "./runtime/mock.js";
 export { ClaudeCliRuntime } from "./runtime/cli.js";
