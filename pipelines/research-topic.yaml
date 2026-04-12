@@ -1,0 +1,68 @@
+# Pipeline: research-topic
+# Research a topic using Claude — search, summarize, compare, produce report.
+# Uses the autoresearch insight: structured research beats ad-hoc chatting.
+#
+# Run: npx claudeflow run pipelines/research-topic.yaml --input '{"topic": "..."}'
+
+name: research-topic
+description: Deep research on any topic — search, analyze, compare, report
+version: "1.0.0"
+
+steps:
+  - id: search
+    prompt: |
+      Research this topic thoroughly: {topic}
+
+      Find and analyze:
+      1. The top 5 most relevant papers, tools, or resources
+      2. Key concepts and terminology
+      3. Current state of the art
+      4. Known limitations and open problems
+
+      For each resource, provide: title, URL (if known), one-paragraph summary,
+      and relevance score (1-10).
+    output:
+      resources:
+        type: array
+        items: string
+      key_concepts:
+        type: array
+        items: string
+      state_of_art: string
+
+  - id: compare
+    prompt: |
+      Compare the approaches found in the research:
+      {search.resources}
+
+      Create a comparison table with:
+      - Approach name
+      - Strengths
+      - Weaknesses
+      - Best suited for (use case)
+      - Maturity level (experimental / production / deprecated)
+    output:
+      comparison_table: string
+      best_overall: string
+      best_for_beginners: string
+
+  - id: report
+    prompt: |
+      Write a structured research report on: {topic}
+
+      Use these findings:
+      Key concepts: {search.key_concepts}
+      State of the art: {search.state_of_art}
+      Comparison: {compare.comparison_table}
+      Best overall: {compare.best_overall}
+
+      Format as a professional report with:
+      - Executive summary (3 sentences)
+      - Background
+      - Analysis
+      - Comparison table
+      - Recommendations
+      - References
+    output:
+      report: string
+      executive_summary: string

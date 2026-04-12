@@ -6,6 +6,7 @@ import { PipelineDef } from "../core/pipeline.js";
 import { loop } from "../control/loop.js";
 import { branch } from "../control/branch.js";
 import { map } from "../control/map.js";
+import { optimize } from "../control/optimize.js";
 import type { StepDef, RetryConfig } from "../core/step.js";
 import type { Context } from "../core/context.js";
 
@@ -16,6 +17,7 @@ interface YamlPipeline {
   description?: string;
   version?: string;
   steps: YamlStep[];
+  optimize?: YamlOptimize;
 }
 
 interface YamlStep {
@@ -34,6 +36,19 @@ interface YamlStep {
   branch?: { condition: string; true: YamlStep; false: YamlStep };
   map?: string; // dot-path to array in context
   concurrency?: number;
+  // Tool node (deterministic, no LLM)
+  tool?: string; // adapter name: "shell", "github", "file", "eval"
+  action?: string;
+  params?: Record<string, unknown>;
+}
+
+interface YamlOptimize {
+  mutate: YamlStep;
+  evaluate: YamlStep;
+  metric: string;
+  direction: "lower" | "higher";
+  maxIterations: number;
+  timeBudget?: number;
 }
 
 type YamlSchemaField =
@@ -99,8 +114,38 @@ export function parseYamlString(yamlContent: string): PipelineDef {
       continue;
     }
 
+    // Tool step (deterministic, no LLM)
+    if (yamlStep.tool) {
+      pipeline = pipeline.tool({
+        id: yamlStep.id,
+        adapter: yamlStep.tool,
+        action: yamlStep.action ?? "run",
+        params: yamlStep.params ?? {},
+      });
+      continue;
+    }
+
     // Regular step
     pipeline = pipeline.step(buildStepDef(yamlStep));
+  }
+
+  // Top-level optimize block
+  if (doc.optimize) {
+    const { optimize: optDef } = doc;
+    const mutateStep = optDef.mutate.tool
+      ? buildStepDef(optDef.mutate) // LLM step that uses tools
+      : buildStepDef(optDef.mutate);
+    const evalStep = optDef.evaluate.tool
+      ? buildStepDef(optDef.evaluate)
+      : buildStepDef(optDef.evaluate);
+
+    const optimizeDef = optimize(mutateStep, evalStep, {
+      metricKey: optDef.metric,
+      direction: optDef.direction,
+      maxIterations: optDef.maxIterations,
+      timeBudgetMs: optDef.timeBudget,
+    });
+    pipeline = pipeline.optimize(optimizeDef);
   }
 
   return pipeline;

@@ -1,0 +1,52 @@
+# Pipeline: quality-gate
+# Run ALL quality checks on ClaudeFlow before release.
+# This is the definitive "is it ready?" pipeline.
+#
+# Run: npx claudeflow run pipelines/quality-gate.yaml --verbose
+
+name: claudeflow-quality-gate
+description: Full quality check — types, tests, docs, exports, code review
+version: "1.0.0"
+
+steps:
+  - id: typecheck
+    tool: shell
+    action: run
+    params:
+      command: "npx tsc --noEmit 2>&1"
+      timeout: 60000
+
+  - id: tests
+    tool: shell
+    action: run
+    params:
+      command: "npx vitest run 2>&1"
+      timeout: 120000
+
+  - id: review
+    prompt: |
+      You are reviewing the ClaudeFlow project for release readiness.
+
+      TypeScript check result: {typecheck.stdout}
+      Test results: {tests.stdout}
+
+      Read CLAUDE.md and verify every claim matches the actual code.
+      Check: are all 6 node types documented? Are all tools listed?
+      Check: does package.json have correct exports and bin field?
+
+      Report:
+      - Types: pass/fail
+      - Tests: pass/fail (count)
+      - Docs accuracy: score 1-10
+      - Export correctness: pass/fail
+      - Overall: ready/not ready
+    output:
+      types_pass: boolean
+      tests_pass: boolean
+      test_count: number
+      docs_score: number
+      exports_ok: boolean
+      ready: boolean
+      issues:
+        type: array
+        items: string
