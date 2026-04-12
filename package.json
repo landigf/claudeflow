@@ -1,0 +1,57 @@
+{
+  "name": "claudeflow",
+  "version": "0.1.0",
+  "description": "Composable AI task pipelines — Zod for LLM workflows",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./testing": "./dist/testing/index.js",
+    "./runtime": "./dist/runtime/types.js"
+  },
+  "bin": {
+    "claudeflow": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "biome format --write src test",
+    "lint": "biome check src test"
+  },
+  "dependencies": {
+    "nanoid": "^5.1.5",
+    "yaml": "^2.7.1",
+    "zod": "^3.25.42"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.39.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^25.6.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.1"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "pipeline",
+    "claude",
+    "llm",
+    "workflow",
+    "composable",
+    "typed",
+    "zod"
+  ]
+}
