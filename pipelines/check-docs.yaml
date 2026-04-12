@@ -1,0 +1,77 @@
+# Pipeline: check-docs
+# Verify documentation is coherent and up-to-date with the actual code.
+#
+# Run: npx tsx examples/run-pipeline.ts check-docs
+
+name: check-docs-coherence
+description: Compare docs against actual code — find lies, stale info, missing docs
+version: "1.0.0"
+
+steps:
+  - id: read-docs
+    prompt: |
+      Read all documentation files in this project:
+      - README.md
+      - CLAUDE.md
+      - AGENTS.md
+      - docs/PIPELINE_IDEAS.md
+      - package.json (description, exports, bin)
+
+      For each file, extract every factual claim about what exists.
+      Example claims: "step() builder works", "35 tests", "YAML loader exists",
+      "exports ./testing", "ClaudeApiRuntime uses @anthropic-ai/sdk"
+
+      List ALL claims with the file and line where each appears.
+    output:
+      claims:
+        type: array
+        items: string
+
+  - id: verify-claims
+    prompt: |
+      These claims were found in the documentation:
+      {read-docs.claims}
+
+      Now verify EACH claim against the actual source code.
+      For each claim:
+      - Check if the referenced file/function/feature actually exists
+      - Check if it works as described
+      - Check if numbers are accurate (test count, step count, etc.)
+
+      Report:
+      - VERIFIED: claim is accurate
+      - STALE: claim was true but is outdated
+      - FALSE: claim is wrong
+      - MISSING: something exists in code but isn't documented
+    output:
+      verified:
+        type: array
+        items: string
+      stale:
+        type: array
+        items: string
+      false_claims:
+        type: array
+        items: string
+      undocumented:
+        type: array
+        items: string
+
+  - id: fix-report
+    prompt: |
+      Documentation audit results:
+
+      Verified (correct): {verify-claims.verified}
+      Stale (outdated): {verify-claims.stale}
+      False (wrong): {verify-claims.false_claims}
+      Undocumented (missing from docs): {verify-claims.undocumented}
+
+      For each STALE or FALSE claim, write the exact fix needed.
+      For each UNDOCUMENTED feature, suggest where to add it.
+
+      Be specific: "In README.md line 42, change '6 tests' to '35 tests'"
+    output:
+      fixes:
+        type: array
+        items: string
+      doc_health_score: number

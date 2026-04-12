@@ -1,0 +1,69 @@
+# Pipeline: improve-self
+# Use ClaudeFlow to find and implement improvements in itself.
+#
+# Run: npx tsx examples/run-pipeline.ts improve-self
+
+name: improve-claudeflow
+description: Find concrete improvements, implement them, verify tests pass
+version: "1.0.0"
+
+steps:
+  - id: audit
+    prompt: |
+      You are inside the ClaudeFlow project — a TypeScript library for composable AI pipelines.
+
+      Read the source files in src/ and test/ directories. Focus on:
+      1. Missing test coverage — which functions have no tests?
+      2. Edge cases not handled — what inputs would crash?
+      3. API inconsistencies — naming, patterns that don't match
+      4. Performance — anything obviously slow or wasteful?
+      5. Missing features that would make it more useful
+
+      List the top 5 most impactful improvements. For each:
+      - What file and function
+      - What the problem is
+      - How to fix it (specific, not vague)
+      - Estimated effort (small/medium/large)
+
+      Be specific — reference actual code you read.
+    output:
+      improvements:
+        type: array
+        items: string
+      most_critical: string
+
+  - id: implement
+    prompt: |
+      The audit found these improvements:
+      {audit.improvements}
+
+      Most critical: {audit.most_critical}
+
+      Implement the most critical improvement. Make the actual code change.
+      Then run `npx tsc --noEmit` to verify it compiles.
+      Then run `npx vitest run` to verify tests pass.
+
+      If tests fail, fix them. Do not leave broken code.
+    tools: [Read, Write, Edit, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 300000
+
+  - id: verify
+    prompt: |
+      Run the full test suite and type checker:
+      ```
+      npx tsc --noEmit && npx vitest run
+      ```
+
+      Report:
+      - How many tests pass
+      - Any failures or type errors
+      - What was changed in the previous step
+    tools: [Bash, Read]
+    output:
+      tests_pass: boolean
+      test_count: number
+      changes_summary: string
