@@ -16,7 +16,7 @@ describe("analyzer", () => {
     expect(report.estimatedTokens.input.expected).toBeGreaterThan(0);
     expect(report.estimatedTokens.output.expected).toBeGreaterThan(0);
     expect(report.estimatedCost["claude-sonnet-4-6"].perRun).toBeGreaterThan(0);
-    expect(report.estimatedDuration.sequentialMs).toBe(6000); // 2 LLM steps × 3s
+    expect(report.estimatedDuration.sequentialMs).toBe(10000); // 2 simple LLM steps × 5s
   });
 
   it("detects warnings for steps without schema or retry", () => {
@@ -38,7 +38,7 @@ describe("analyzer", () => {
 
     expect(report.llmStepCount).toBe(1);
     expect(report.deterministicStepCount).toBe(1);
-    expect(report.estimatedDuration.sequentialMs).toBe(3001); // 1 LLM × 3s + 1 det × 1ms
+    expect(report.estimatedDuration.sequentialMs).toBe(5001); // 1 simple LLM × 5s + 1 det × 1ms
   });
 
   it("extracts required tools", () => {

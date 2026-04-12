@@ -250,25 +250,31 @@ export class PipelineDef {
       console.log(`[${nodeIndex + 1}/${this.nodes.length}] map "${mapDef.step.id}" over ${items.length} items`);
     }
 
-    const traces: StepTrace[] = [];
-    const results: unknown[] = [];
+    const traces: StepTrace[] = new Array(items.length);
+    const results: unknown[] = new Array(items.length);
+    const concurrency = mapDef.config.concurrency ?? 1;
 
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      // Create a child context with the current item as "item"
-      const itemCtx = advanceContext(ctx, "item", item);
+    // Process items in batches of `concurrency` size
+    for (let batchStart = 0; batchStart < items.length; batchStart += concurrency) {
+      const batchEnd = Math.min(batchStart + concurrency, items.length);
+      const batch = items.slice(batchStart, batchEnd).map(async (item, offset) => {
+        const i = batchStart + offset;
+        const itemCtx = advanceContext(ctx, "item", item);
 
-      if (options.verbose) {
-        process.stdout.write(`  [${i + 1}/${items.length}] `);
-      }
+        if (options.verbose) {
+          process.stdout.write(`  [${i + 1}/${items.length}] `);
+        }
 
-      const trace = await this.#executeStep(mapDef.step, itemCtx, options);
-      traces.push(trace);
-      results.push(trace.outputSnapshot);
+        const trace = await this.#executeStep(mapDef.step, itemCtx, options);
+        traces[i] = trace;
+        results[i] = trace.outputSnapshot;
 
-      if (options.verbose) {
-        console.log(`✓ ${trace.durationMs}ms`);
-      }
+        if (options.verbose) {
+          console.log(`✓ ${trace.durationMs}ms`);
+        }
+      });
+
+      await Promise.all(batch);
     }
 
     // Store map results as array keyed by step id

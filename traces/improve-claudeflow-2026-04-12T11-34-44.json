@@ -1,0 +1,117 @@
+{
+  "runId": "t-08XRLZVUn7oMsTdgZSL",
+  "pipelineName": "improve-claudeflow",
+  "status": "completed",
+  "startedAt": "2026-04-12T11:31:59.508Z",
+  "finishedAt": "2026-04-12T11:34:44.272Z",
+  "totalDurationMs": 164764,
+  "totalTokens": {
+    "inputTokens": 17,
+    "outputTokens": 2695
+  },
+  "totalCostUsd": 0.49006425,
+  "steps": [
+    {
+      "stepId": "audit",
+      "stepName": "audit",
+      "status": "completed",
+      "durationMs": 100817,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "You are inside the ClaudeFlow project — a TypeScript library for composable AI pipelines.\n\nRead the source files in src/ and test/ directories. Focus on:\n1. Missing test coverage — which functions have no tests?\n2. Edge cases not handled — what inputs would crash?\n3. API inconsistencies — naming, patterns that don't match\n4. Performance — anything obviously slow or wasteful?\n5. Missing features that would make it more useful\n\nList the top 5 most impactful improvements. For each:\n- What file and function\n- What the problem is\n- How to fix it (specific, not vague)\n- Estimated effort (small/medium/large)\n\nBe specific — reference actual code you read.\n",
+          "response": "```json\n{\n  \"improvements\": [\n    \"1. **Map concurrency is dead code** — `src/core/pipeline.ts:236-277`: `MapDef` accepts `config.concurrency` but all items are processed sequentially in a `for` loop (line 256). Users see the option, expect parallelism, get none. **Fix**: Implement `Promise.all` with a concurrency limiter (e.g., chunk array into batches of `concurrency` size, await each batch). **Effort**: Medium.\",\n    \"2. **No tests for control/resolve.ts, runtime/cli.ts, runtime/api.ts** — These are critical execution paths with zero test coverage. `resolve.ts` is used by branch, loop, and map; `cli.ts` spawns real processes with JSON parsing that can fail on malformed output (line 106-116 has fragile regex + uncaught JSON.parse). **Fix**: Add unit tests for `resolveStep()` with builder vs built steps; add integration tests for CLI runtime with mocked child_process; add basic API runtime tests. **Effort**: Medium.\",\n    \"3. **YAML condition parser is fragile** — `src/loader/yaml.ts:193-219`: `buildCondition()` uses simple regex that breaks on extra whitespace (`score >= 0.5`), string comparisons (`status == \\\"pending\\\"`), and boolean logic. **Fix**: Replace regex with a proper tokenizer that splits on known operators, trims whitespace, and supports string literals and compound expressions. **Effort**: Medium.\",\n    \"4. **Loop runs at least once regardless of condition** — `src/core/pipeline.ts:199-204`: The condition is checked _after_ step execution (do-while semantics), meaning even if the condition is already satisfied, one iteration runs, wasting tokens/cost. **Fix**: Add a `checkBefore` option (default false for backward compat) or change to while-loop semantics with an explicit `do` flag. **Effort**: Small.\",\n    \"5. **Schema validation errors are opaque** — `src/core/pipeline.ts:346-363`: When `outputSchema` Zod validation fails, the error message is generic (`Output schema validation failed for step \\\"...\\\"`). The actual Zod error with field-level details is caught but not surfaced. **Fix**: Include `ZodError.issues` in the error message or attach it to the trace's error field so users can debug malformed LLM outputs. **Effort**: Small.\"\n  ],\n  \"most_critical\": \"Map concurrency being dead code (src/core/pipeline.ts:236-277) — it's a public API that accepts a concurrency config but silently ignores it. This is both a correctness bug (broken contract) and a performance issue (sequential processing of N items when users expect parallelism). Fix by implementing batched Promise.all execution.\"\n}\n```",
+          "usage": {
+            "inputTokens": 4,
+            "outputTokens": 927,
+            "cacheReadTokens": 27640
+          },
+          "costUsd": 0.26581299999999997,
+          "durationMs": 100817
+        }
+      ],
+      "inputSnapshot": {},
+      "outputSnapshot": {
+        "improvements": [
+          "1. **Map concurrency is dead code** — `src/core/pipeline.ts:236-277`: `MapDef` accepts `config.concurrency` but all items are processed sequentially in a `for` loop (line 256). Users see the option, expect parallelism, get none. **Fix**: Implement `Promise.all` with a concurrency limiter (e.g., chunk array into batches of `concurrency` size, await each batch). **Effort**: Medium.",
+          "2. **No tests for control/resolve.ts, runtime/cli.ts, runtime/api.ts** — These are critical execution paths with zero test coverage. `resolve.ts` is used by branch, loop, and map; `cli.ts` spawns real processes with JSON parsing that can fail on malformed output (line 106-116 has fragile regex + uncaught JSON.parse). **Fix**: Add unit tests for `resolveStep()` with builder vs built steps; add integration tests for CLI runtime with mocked child_process; add basic API runtime tests. **Effort**: Medium.",
+          "3. **YAML condition parser is fragile** — `src/loader/yaml.ts:193-219`: `buildCondition()` uses simple regex that breaks on extra whitespace (`score >= 0.5`), string comparisons (`status == \"pending\"`), and boolean logic. **Fix**: Replace regex with a proper tokenizer that splits on known operators, trims whitespace, and supports string literals and compound expressions. **Effort**: Medium.",
+          "4. **Loop runs at least once regardless of condition** — `src/core/pipeline.ts:199-204`: The condition is checked _after_ step execution (do-while semantics), meaning even if the condition is already satisfied, one iteration runs, wasting tokens/cost. **Fix**: Add a `checkBefore` option (default false for backward compat) or change to while-loop semantics with an explicit `do` flag. **Effort**: Small.",
+          "5. **Schema validation errors are opaque** — `src/core/pipeline.ts:346-363`: When `outputSchema` Zod validation fails, the error message is generic (`Output schema validation failed for step \"...\"`). The actual Zod error with field-level details is caught but not surfaced. **Fix**: Include `ZodError.issues` in the error message or attach it to the trace's error field so users can debug malformed LLM outputs. **Effort**: Small."
+        ],
+        "most_critical": "Map concurrency being dead code (src/core/pipeline.ts:236-277) — it's a public API that accepts a concurrency config but silently ignores it. This is both a correctness bug (broken contract) and a performance issue (sequential processing of N items when users expect parallelism). Fix by implementing batched Promise.all execution."
+      }
+    },
+    {
+      "stepId": "implement",
+      "stepName": "implement",
+      "status": "completed",
+      "durationMs": 52032,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "The audit found these improvements:\n[\"1. **Map concurrency is dead code** — `src/core/pipeline.ts:236-277`: `MapDef` accepts `config.concurrency` but all items are processed sequentially in a `for` loop (line 256). Users see the option, expect parallelism, get none. **Fix**: Implement `Promise.all` with a concurrency limiter (e.g., chunk array into batches of `concurrency` size, await each batch). **Effort**: Medium.\",\"2. **No tests for control/resolve.ts, runtime/cli.ts, runtime/api.ts** — These are critical execution paths with zero test coverage. `resolve.ts` is used by branch, loop, and map; `cli.ts` spawns real processes with JSON parsing that can fail on malformed output (line 106-116 has fragile regex + uncaught JSON.parse). **Fix**: Add unit tests for `resolveStep()` with builder vs built steps; add integration tests for CLI runtime with mocked child_process; add basic API runtime tests. **Effort**: Medium.\",\"3. **YAML condition parser is fragile** — `src/loader/yaml.ts:193-219`: `buildCondition()` uses simple regex that breaks on extra whitespace (`score >= 0.5`), string comparisons (`status == \\\"pending\\\"`), and boolean logic. **Fix**: Replace regex with a proper tokenizer that splits on known operators, trims whitespace, and supports string literals and compound expressions. **Effort**: Medium.\",\"4. **Loop runs at least once regardless of condition** — `src/core/pipeline.ts:199-204`: The condition is checked _after_ step execution (do-while semantics), meaning even if the condition is already satisfied, one iteration runs, wasting tokens/cost. **Fix**: Add a `checkBefore` option (default false for backward compat) or change to while-loop semantics with an explicit `do` flag. **Effort**: Small.\",\"5. **Schema validation errors are opaque** — `src/core/pipeline.ts:346-363`: When `outputSchema` Zod validation fails, the error message is generic (`Output schema validation failed for step \\\"...\\\"`). The actual Zod error with field-level details is caught but not surfaced. **Fix**: Include `ZodError.issues` in the error message or attach it to the trace's error field so users can debug malformed LLM outputs. **Effort**: Small.\"]\n\nMost critical: Map concurrency being dead code (src/core/pipeline.ts:236-277) — it's a public API that accepts a concurrency config but silently ignores it. This is both a correctness bug (broken contract) and a performance issue (sequential processing of N items when users expect parallelism). Fix by implementing batched Promise.all execution.\n\nImplement the most critical improvement. Make the actual code change.\nThen run `npx tsc --noEmit` to verify it compiles.\nThen run `npx vitest run` to verify tests pass.\n\nIf tests fail, fix them. Do not leave broken code.\n",
+          "response": "All 35 tests pass. The fix replaces the sequential `for` loop in `#executeMapNode` with batched `Promise.all` execution that respects the `concurrency` config:\n\n- **`concurrency` unset or 1**: processes items one at a time (same behavior as before)\n- **`concurrency` > 1**: processes items in parallel batches of that size\n- Results are stored by index to preserve correct ordering regardless of completion order",
+          "usage": {
+            "inputTokens": 9,
+            "outputTokens": 1407,
+            "cacheReadTokens": 139297
+          },
+          "costUsd": 0.16091850000000002,
+          "durationMs": 52032
+        }
+      ],
+      "inputSnapshot": {
+        "audit": {
+          "improvements": [
+            "1. **Map concurrency is dead code** — `src/core/pipeline.ts:236-277`: `MapDef` accepts `config.concurrency` but all items are processed sequentially in a `for` loop (line 256). Users see the option, expect parallelism, get none. **Fix**: Implement `Promise.all` with a concurrency limiter (e.g., chunk array into batches of `concurrency` size, await each batch). **Effort**: Medium.",
+            "2. **No tests for control/resolve.ts, runtime/cli.ts, runtime/api.ts** — These are critical execution paths with zero test coverage. `resolve.ts` is used by branch, loop, and map; `cli.ts` spawns real processes with JSON parsing that can fail on malformed output (line 106-116 has fragile regex + uncaught JSON.parse). **Fix**: Add unit tests for `resolveStep()` with builder vs built steps; add integration tests for CLI runtime with mocked child_process; add basic API runtime tests. **Effort**: Medium.",
+            "3. **YAML condition parser is fragile** — `src/loader/yaml.ts:193-219`: `buildCondition()` uses simple regex that breaks on extra whitespace (`score >= 0.5`), string comparisons (`status == \"pending\"`), and boolean logic. **Fix**: Replace regex with a proper tokenizer that splits on known operators, trims whitespace, and supports string literals and compound expressions. **Effort**: Medium.",
+            "4. **Loop runs at least once regardless of condition** — `src/core/pipeline.ts:199-204`: The condition is checked _after_ step execution (do-while semantics), meaning even if the condition is already satisfied, one iteration runs, wasting tokens/cost. **Fix**: Add a `checkBefore` option (default false for backward compat) or change to while-loop semantics with an explicit `do` flag. **Effort**: Small.",
+            "5. **Schema validation errors are opaque** — `src/core/pipeline.ts:346-363`: When `outputSchema` Zod validation fails, the error message is generic (`Output schema validation failed for step \"...\"`). The actual Zod error with field-level details is caught but not surfaced. **Fix**: Include `ZodError.issues` in the error message or attach it to the trace's error field so users can debug malformed LLM outputs. **Effort**: Small."
+          ],
+          "most_critical": "Map concurrency being dead code (src/core/pipeline.ts:236-277) — it's a public API that accepts a concurrency config but silently ignores it. This is both a correctness bug (broken contract) and a performance issue (sequential processing of N items when users expect parallelism). Fix by implementing batched Promise.all execution."
+        }
+      },
+      "outputSnapshot": "All 35 tests pass. The fix replaces the sequential `for` loop in `#executeMapNode` with batched `Promise.all` execution that respects the `concurrency` config:\n\n- **`concurrency` unset or 1**: processes items one at a time (same behavior as before)\n- **`concurrency` > 1**: processes items in parallel batches of that size\n- Results are stored by index to preserve correct ordering regardless of completion order"
+    },
+    {
+      "stepId": "verify",
+      "stepName": "verify",
+      "status": "completed",
+      "durationMs": 11913,
+      "attempts": [
+        {
+          "attemptNumber": 1,
+          "prompt": "Run the full test suite and type checker:\n```\nnpx tsc --noEmit && npx vitest run\n```\n\nReport:\n- How many tests pass\n- Any failures or type errors\n- What was changed in the previous step\n",
+          "response": "```json\n{\n  \"tests_pass\": true,\n  \"test_count\": 35,\n  \"changes_summary\": \"Refactored map node execution in pipeline.ts to support concurrent item processing. Replaced sequential for-loop with batched Promise.all, using a configurable concurrency limit (defaulting to 1). Pre-allocates result arrays to preserve item ordering.\"\n}\n```",
+          "usage": {
+            "inputTokens": 4,
+            "outputTokens": 361,
+            "cacheReadTokens": 27538
+          },
+          "costUsd": 0.06333275,
+          "durationMs": 11913
+        }
+      ],
+      "inputSnapshot": {
+        "audit": {
+          "improvements": [
+            "1. **Map concurrency is dead code** — `src/core/pipeline.ts:236-277`: `MapDef` accepts `config.concurrency` but all items are processed sequentially in a `for` loop (line 256). Users see the option, expect parallelism, get none. **Fix**: Implement `Promise.all` with a concurrency limiter (e.g., chunk array into batches of `concurrency` size, await each batch). **Effort**: Medium.",
+            "2. **No tests for control/resolve.ts, runtime/cli.ts, runtime/api.ts** — These are critical execution paths with zero test coverage. `resolve.ts` is used by branch, loop, and map; `cli.ts` spawns real processes with JSON parsing that can fail on malformed output (line 106-116 has fragile regex + uncaught JSON.parse). **Fix**: Add unit tests for `resolveStep()` with builder vs built steps; add integration tests for CLI runtime with mocked child_process; add basic API runtime tests. **Effort**: Medium.",
+            "3. **YAML condition parser is fragile** — `src/loader/yaml.ts:193-219`: `buildCondition()` uses simple regex that breaks on extra whitespace (`score >= 0.5`), string comparisons (`status == \"pending\"`), and boolean logic. **Fix**: Replace regex with a proper tokenizer that splits on known operators, trims whitespace, and supports string literals and compound expressions. **Effort**: Medium.",
+            "4. **Loop runs at least once regardless of condition** — `src/core/pipeline.ts:199-204`: The condition is checked _after_ step execution (do-while semantics), meaning even if the condition is already satisfied, one iteration runs, wasting tokens/cost. **Fix**: Add a `checkBefore` option (default false for backward compat) or change to while-loop semantics with an explicit `do` flag. **Effort**: Small.",
+            "5. **Schema validation errors are opaque** — `src/core/pipeline.ts:346-363`: When `outputSchema` Zod validation fails, the error message is generic (`Output schema validation failed for step \"...\"`). The actual Zod error with field-level details is caught but not surfaced. **Fix**: Include `ZodError.issues` in the error message or attach it to the trace's error field so users can debug malformed LLM outputs. **Effort**: Small."
+          ],
+          "most_critical": "Map concurrency being dead code (src/core/pipeline.ts:236-277) — it's a public API that accepts a concurrency config but silently ignores it. This is both a correctness bug (broken contract) and a performance issue (sequential processing of N items when users expect parallelism). Fix by implementing batched Promise.all execution."
+        },
+        "implement": "All 35 tests pass. The fix replaces the sequential `for` loop in `#executeMapNode` with batched `Promise.all` execution that respects the `concurrency` config:\n\n- **`concurrency` unset or 1**: processes items one at a time (same behavior as before)\n- **`concurrency` > 1**: processes items in parallel batches of that size\n- Results are stored by index to preserve correct ordering regardless of completion order"
+      },
+      "outputSnapshot": {
+        "tests_pass": true,
+        "test_count": 35,
+        "changes_summary": "Refactored map node execution in pipeline.ts to support concurrent item processing. Replaced sequential for-loop with batched Promise.all, using a configurable concurrency limit (defaulting to 1). Pre-allocates result arrays to preserve item ordering."
+      }
+    }
+  ]
+}

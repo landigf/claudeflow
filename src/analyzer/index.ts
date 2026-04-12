@@ -105,8 +105,13 @@ export function analyze(pipeline: PipelineDef): PipelineAnalysis {
     };
   }
 
-  // Time estimate (assume ~3s per LLM step, ~1ms per deterministic step)
-  const sequentialMs = llmSteps.length * 3000 + detSteps.length * 1;
+  // Time estimate: tool-enabled steps (~45s avg), simple prompt steps (~5s avg)
+  let sequentialMs = 0;
+  for (const s of llmSteps) {
+    const hasTools = s.tools && s.tools.length > 0;
+    sequentialMs += hasTools ? 45_000 : 5_000;
+  }
+  sequentialMs += detSteps.length * 1;
   const withRetriesMs = sequentialMs * totalRetryMultiplier;
 
   return {
