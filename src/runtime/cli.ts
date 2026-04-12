@@ -97,17 +97,24 @@ export class ClaudeCliRuntime implements Runtime {
       args.push("--mcp-config", this.#mcpConfig);
     }
 
-    // Build the full prompt with system prompt if provided
-    const fullPrompt = request.systemPrompt
-      ? `${request.systemPrompt}\n\n${request.prompt}`
-      : request.prompt;
+    // Pass system prompt via --system-prompt flag (not concatenated into user prompt)
+    // This prevents Claude from confusing system instructions with user content
+    if (request.systemPrompt) {
+      args.push("--system-prompt", request.systemPrompt);
+    }
 
-    // If output schema is provided, append schema instructions
-    const promptWithSchema = request.outputSchema
-      ? `${fullPrompt}\n\nRespond with ONLY a JSON object matching this schema, no other text:\n${JSON.stringify(zodToJsonSchema(request.outputSchema), null, 2)}`
-      : fullPrompt;
+    // Build the user prompt
+    let userPrompt = request.prompt;
 
-    const raw = await this.#spawn(args, promptWithSchema, timeoutMs);
+    // If output schema is provided, append schema instructions to user prompt
+    if (request.outputSchema) {
+      userPrompt += `\n\nRespond with ONLY a JSON object matching this schema, no other text:\n${JSON.stringify(zodToJsonSchema(request.outputSchema), null, 2)}`;
+    }
+
+    // Add explicit instruction to return content as the result, not write to files
+    userPrompt += "\n\nIMPORTANT: Return your full response as text output. Do NOT write to files or use plan mode. Your response text IS the deliverable.";
+
+    const raw = await this.#spawn(args, userPrompt, timeoutMs);
     const durationMs = Date.now() - startMs;
 
     // Parse the CLI JSON response
@@ -127,6 +134,11 @@ export class ClaudeCliRuntime implements Runtime {
 
     if (parsed.is_error) {
       throw new Error(`Claude CLI error: ${parsed.result}`);
+    }
+
+    // Detect empty results — Claude sometimes writes to files instead of returning output
+    if (!parsed.result || parsed.result.trim().length === 0) {
+      console.warn(`[claudeflow] WARNING: Claude returned empty result. This usually means it wrote to a file instead of returning text. Adding --system-prompt flag should prevent this.`);
     }
 
     // Extract model name from model_usage keys

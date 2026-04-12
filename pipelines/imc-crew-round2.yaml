@@ -1,0 +1,78 @@
+# Round 2: the 4 remaining expert agents that didn't run in round 1
+# Agents 5-8: reproducibility, related work, writing, meta-review
+
+name: imc-crew-round2
+description: Remaining 4 experts — reproducibility, related work, writing, meta-review
+version: "1.0.0"
+
+steps:
+  - id: reproducibility-expert
+    system: |
+      You are an artifact evaluation committee member for IMC 2026.
+      You evaluate whether papers can be reproduced from their published artifacts.
+    prompt: |
+      Read the paper and all supporting files in this directory.
+      Focus on artifact_snapshot.json, build_artifacts.py, and the data.
+
+      Audit:
+      1. Can all figures be regenerated from build_artifacts.py?
+      2. Do ALL numbers in the paper match artifact_snapshot.json?
+      3. Is the dataset publicly accessible on GitHub?
+      4. Are there version mismatches?
+      5. Would this earn the ACM Artifact badge?
+      6. List EVERY factual inconsistency found.
+
+  - id: related-work-expert
+    system: |
+      You are a senior researcher who has published extensively on web traffic,
+      bot detection, and AI-era measurement. You know every major paper from the last 5 years.
+    prompt: |
+      Read the related work section (Section 2) and the positioning table.
+
+      Evaluate:
+      1. Missing critical references?
+      2. Is the positioning table accurate?
+      3. Does the paper distinguish itself from HTTP Archive?
+      4. Is the gap argument convincing?
+      5. Suggest 3-5 additional citations.
+
+  - id: writing-expert
+    system: |
+      You are a technical writing expert who has helped 100+ papers get accepted.
+    prompt: |
+      Read the full paper and evaluate writing quality.
+
+      1. Is the abstract compelling? 30-second skim test?
+      2. Claims supported by evidence?
+      3. Are figures clear?
+      4. Within 13-page limit?
+      5. Top 5 writing improvements for maximum impact.
+
+  - id: meta-reviewer
+    system: |
+      You are the IMC 2026 area chair. Score 1-5, be brutally honest.
+    prompt: |
+      You have reviews from the previous round (4 experts completed):
+      - IMC Chair: Score 3 (weak accept), strongest contribution is workload characterization
+      - CDN Expert: Cache study too small for policy conclusions, but workload characterization is strong
+      - Methodology Expert: Statistical rigor is adequate, geographic confound needs addressing
+      - Agent Expert: "AgentWebBench" name is aspirational — scripted-random ≠ agent
+
+      Plus your own review from agents above:
+      Reproducibility: {reproducibility-expert}
+      Related Work: {related-work-expert}
+      Writing: {writing-expert}
+
+      Note: since the last review, these improvements were made:
+      - LLM traces collected for ALL 10 tasks (26,322 requests with Gemini 2.5 Flash)
+      - Cache study scaled to 82,455 requests (was 14,833)
+      - GDSF dominates at ALL sizes (stronger finding)
+      - HTTP Archive comparison added
+      - All stale crossover claims fixed
+      - All numbers verified against artifact
+
+      Write the FINAL meta-review:
+      1. CONSENSUS SCORE (1-5)
+      2. MANDATORY changes for acceptance
+      3. PREDICTION: will this be accepted?
+      4. ACTION PLAN for the next 10 days
