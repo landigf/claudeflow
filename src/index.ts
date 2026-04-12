@@ -8,10 +8,14 @@ export { loop } from "./control/loop.js";
 export { branch } from "./control/branch.js";
 export { map } from "./control/map.js";
 export { optimize } from "./control/optimize.js";
+export { agent, assign, createCrew } from "./control/agents.js";
 
 // Tools
-export { ShellTool, GitHubTool, FileTool, EvalTool } from "./tools/index.js";
+export { ShellTool, GitHubTool, FileTool, EvalTool, PromptfooTool, DspyTool } from "./tools/index.js";
 export type { ToolAdapter } from "./tools/index.js";
+
+// Observability
+export { traceToOtlp, exportToOtlp } from "./observability/otlp.js";
 
 // Loader
 export { loadYaml, parseYamlString } from "./loader/yaml.js";
@@ -46,6 +50,7 @@ export type { LoopDef, LoopConfig } from "./control/loop.js";
 export type { BranchDef } from "./control/branch.js";
 export type { MapDef, MapConfig } from "./control/map.js";
 export type { OptimizeDef, OptimizeConfig } from "./control/optimize.js";
+export type { AgentRole } from "./control/agents.js";
 export type { ToolNode } from "./core/pipeline.js";
 export type { ValidationError } from "./testing/validate.js";
 export type { BenchmarkResult, BenchmarkOptions } from "./testing/benchmark.js";
