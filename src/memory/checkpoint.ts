@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import path from "node:path";
 import type { StepTrace } from "../observability/trace.js";
 
@@ -73,7 +73,7 @@ export class CheckpointManager {
   }
 
   #listFiles(): string[] {
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
+    // readdirSync imported at top level
     if (!existsSync(this.#dir)) return [];
     return readdirSync(this.#dir)
       .filter((f: string) => f.endsWith(".json"))

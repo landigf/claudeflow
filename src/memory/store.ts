@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from "node:fs";
 import path from "node:path";
 
 /**
@@ -52,14 +52,12 @@ export class MemoryStore {
   delete(key: string): boolean {
     const filePath = this.#keyPath(key);
     if (!existsSync(filePath)) return false;
-    const { unlinkSync } = require("node:fs") as typeof import("node:fs");
     unlinkSync(filePath);
     return true;
   }
 
   /** List all keys. */
   keys(): string[] {
-    const { readdirSync } = require("node:fs") as typeof import("node:fs");
     if (!existsSync(this.#dir)) return [];
     return readdirSync(this.#dir)
       .filter((f: string) => f.endsWith(".json"))
