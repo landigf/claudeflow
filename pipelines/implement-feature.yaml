@@ -1,0 +1,76 @@
+# Pipeline: implement-feature
+# Used by ClaudeFlow to build itself. Stored as a reusable artifact.
+#
+# Input: { issue_number: number, repo: string }
+# Output: { branch: string, files_changed: string[], pr_url: string }
+
+name: implement-feature
+description: >
+  Given a GitHub issue, research best practices, implement the feature,
+  run tests, and create a PR. This is the pipeline ClaudeFlow uses to build itself.
+version: "1.0.0"
+
+steps:
+  - id: read-issue
+    prompt: |
+      Read GitHub issue #{issue_number} from {repo}.
+      Extract: title, acceptance criteria, technical notes, labels.
+      Return structured data.
+    output:
+      title: string
+      criteria: string[]
+      technical_notes: string
+      labels: string[]
+
+  - id: research
+    prompt: |
+      Research best practices for implementing: {read-issue.title}
+      Context: {read-issue.technical_notes}
+
+      Search for existing patterns in well-known TypeScript libraries (Zod, tRPC, Effect).
+      Focus on: API design, error handling, testing patterns.
+
+      Return 3-5 concrete recommendations with code examples.
+    output:
+      recommendations: { title: string, rationale: string, example: string }[]
+
+  - id: plan
+    prompt: |
+      Create an implementation plan for: {read-issue.title}
+
+      Acceptance criteria:
+      {read-issue.criteria}
+
+      Best practices found:
+      {research.recommendations}
+
+      List the exact files to create/modify, what each should contain,
+      and the order of implementation.
+    output:
+      files: { path: string, action: string, description: string }[]
+      implementation_order: string[]
+
+  - id: implement
+    prompt: |
+      Implement the following plan:
+      {plan.files}
+
+      Order: {plan.implementation_order}
+
+      Write the actual TypeScript code. Follow existing patterns in the codebase.
+      Run `npx tsc --noEmit` to verify. Fix any errors.
+    tools: [Read, Write, Edit, Bash]
+    timeout: 300000
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+
+  - id: test
+    prompt: |
+      Run the test suite: `npm run test`
+      If tests fail, fix the code and run again.
+      If tests pass, report success.
+    tools: [Bash, Read, Edit]
+    retry:
+      maxAttempts: 3
