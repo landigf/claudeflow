@@ -18,12 +18,18 @@ steps:
       3. API inconsistencies — naming, patterns that don't match
       4. Performance — anything obviously slow or wasteful?
       5. Missing features that would make it more useful
+      6. Overclaiming or invented precision — any feature that presents heuristic,
+         hard-coded, or guessed behavior as if it were measured, compiler-like,
+         or reliable without evidence
 
       List the top 5 most impactful improvements. For each:
       - What file and function
       - What the problem is
       - How to fix it (specific, not vague)
       - Estimated effort (small/medium/large)
+      - Why this is a correctness/reliability issue rather than just polish
+      - Delivery class: `ship-now`, `experimental`, or `research-needed`
+      - What evidence, data, or experiment would be needed if it is not `ship-now`
 
       Be specific — reference actual code you read.
     output:
@@ -32,18 +38,123 @@ steps:
         items: string
       most_critical: string
 
+  - id: choose-real-solution
+    prompt: |
+      Review the audit findings and choose what should actually be implemented now.
+
+      Audit output:
+      {audit}
+
+      Rules:
+      - Prefer the highest-impact improvement that is truly `ship-now`.
+      - If the most ambitious idea is `experimental` or `research-needed`, do not pretend it is
+        ready. Instead:
+        1. explain why it should not be shipped as a finished feature yet
+        2. propose the smallest honest experiment or validation plan needed
+        3. choose the next best `ship-now` improvement for implementation
+      - "Out-of-the-box" ideas are good only if the repo can support them honestly.
+      - Never choose an implementation whose core value depends on a model, benchmark, dataset,
+        or runtime signal that does not exist yet.
+
+      Return:
+      - which improvement to implement now
+      - why it is shippable now
+      - which ideas should be deferred to experiments/research
+      - a concrete experiment plan for the strongest deferred idea
+    output:
+      chosen_improvement: string
+      why_shippable_now: string
+      deferred_ideas:
+        type: array
+        items: string
+      experiment_plan: string
+
   - id: implement
     prompt: |
       The audit found these improvements:
       {audit.improvements}
 
-      Most critical: {audit.most_critical}
+      Decision on what is actually shippable now:
+      {choose-real-solution}
 
-      Implement the most critical improvement. Make the actual code change.
+      Implement the chosen improvement. Make the actual code change.
+
+      Guardrails:
+      - Do not implement speculative infrastructure just to preserve a beautiful idea.
+      - If a real solution would require an ML model, real telemetry, extra data collection,
+        or experiments the repo does not have, do not fake it. Either:
+        1. leave it deferred in the experiment plan, or
+        2. implement only honest scaffolding that is clearly marked experimental and still complete.
+      - Never leave behind a feature that sounds finished when the hard part is still hypothetical.
+
       Then run `npx tsc --noEmit` to verify it compiles.
       Then run `npx vitest run` to verify tests pass.
 
       If tests fail, fix them. Do not leave broken code.
+    tools: [Read, Write, Edit, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 300000
+
+  - id: skeptical-review
+    prompt: |
+      Review the current working tree after the implementation step.
+
+      Your job is to be skeptical and block optimistic nonsense.
+
+      Use Bash/Read to inspect the changed files and answer:
+      1. Did the implementation introduce heuristic behavior that is presented as precise or reliable?
+      2. Did it add hard-coded constants, static predictions, or "compiler-like" analysis without
+         clearly labeling assumptions and limits?
+      3. Are there docs or comments that oversell what the code actually guarantees?
+      4. Are there missing tests for new behavior or changed semantics?
+      5. Should this change be blocked until those issues are fixed?
+      6. Did the implementation quietly ship something that really belongs in the experiment plan
+         instead of the product?
+      7. If the idea was ambitious, did the implementation preserve the useful direction while
+         staying honest about what is still unproven?
+
+      Rules:
+      - If a feature is heuristic, say so explicitly and require that the code/docs label it.
+      - If a claim is not backed by tests, traces, or measured data in the repo, treat that as a blocker.
+      - If an unfinished idea is being presented as production-ready, block it.
+      - It is acceptable to leave a strong experiment plan for humans; it is not acceptable to
+        ship a fake finished solution.
+      - Focus on preventing false confidence, not just syntax bugs.
+    tools: [Bash, Read]
+    output:
+      approved: boolean
+      blocking_issues:
+        type: array
+        items: string
+      required_followups:
+        type: array
+        items: string
+      summary: string
+
+  - id: harden
+    prompt: |
+      The skeptical review said:
+      {skeptical-review}
+
+      If there are blocking issues or required follow-ups, fix them now.
+      Priorities:
+      - remove or relabel overclaimed behavior
+      - add missing tests for changed behavior
+      - make docs/comments match the real guarantees
+      - avoid shipping features that sound more reliable than they are
+      - if something really belongs in the experiment plan, move it there instead of shipping it
+        as a finished feature
+
+      If the skeptical review is already satisfied, make no unnecessary changes.
+
+      After edits, run:
+      - `npx tsc --noEmit`
+      - `npx vitest run`
+
+      Do not leave the repo in a state where the feature still sounds more precise than it is.
     tools: [Read, Write, Edit, Bash]
     retry:
       maxAttempts: 2
@@ -58,12 +169,20 @@ steps:
       npx tsc --noEmit && npx vitest run
       ```
 
+      Also review the skeptical review and hardening pass:
+      - Chosen implementation: {choose-real-solution}
+      - Skeptical review: {skeptical-review}
+      - Hardening summary: {harden}
+
       Report:
       - How many tests pass
       - Any failures or type errors
-      - What was changed in the previous step
+      - What was changed in the previous steps
+      - Whether heuristic/optimism issues were resolved
+      - Whether deferred experiment-only ideas remained clearly deferred
     tools: [Bash, Read]
     output:
       tests_pass: boolean
       test_count: number
       changes_summary: string
+      skepticism_resolved: boolean

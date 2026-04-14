@@ -3,7 +3,7 @@
  *
  * This script:
  * 1. Loads the self-audit pipeline from YAML
- * 2. Analyzes it (predicts cost/time before running)
+ * 2. Inspects it with the static planner
  * 3. Runs it with ClaudeCliRuntime
  * 4. Saves the trace to traces/ as proof
  *
@@ -16,8 +16,8 @@ import { loadYaml, analyze, formatAnalysis, ClaudeCliRuntime } from "../src/inde
 const pipelinePath = path.join(import.meta.dirname, "../pipelines/self-audit.yaml");
 const p = loadYaml(pipelinePath);
 
-// Step 1: Analyze before running (the "compiler")
-console.log("=== Pre-execution Analysis ===\n");
+// Step 1: Inspect before running
+console.log("=== Static Plan ===\n");
 const analysis = analyze(p);
 console.log(formatAnalysis(analysis));
 console.log("");

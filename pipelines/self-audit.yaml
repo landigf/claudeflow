@@ -29,6 +29,8 @@ steps:
       3. Missing error handling
       4. Type safety issues (any casts, missing types)
       5. Files over 200 lines that should be split
+      6. Features whose names/docs promise stronger guarantees than the implementation provides
+      7. Heuristics or estimates that are phrased like precise measurements or compiler facts
 
       Previous step found these files: {read-structure.files}
 
@@ -49,7 +51,16 @@ steps:
       Issues found: {check-quality.issues}
 
       Suggest the top 3 most impactful improvements.
-      For each, explain: what to change, why, and estimated effort.
+      For each, explain: what to change, why, estimated effort, and whether it prevents
+      correctness bugs or false confidence in the product.
+
+      For each suggestion also state one of:
+      - `ship-now`
+      - `experimental`
+      - `research-needed`
+
+      If it is `experimental` or `research-needed`, say what evidence or experiment would be
+      needed before it should be treated as a real product feature.
     output:
       improvements:
         type: array

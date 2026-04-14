@@ -7,7 +7,11 @@ export interface ClaudeCliRuntimeOptions {
   command?: string;
   /** Working directory for claude. Default: process.cwd() */
   cwd?: string;
-  /** Default timeout in ms. Default: 120_000 (2 minutes) */
+  /**
+   * Default wrapper timeout in ms. Default: 120_000 (2 minutes).
+   * This is enforced by ClaudeFlow around each CLI invocation; it is not a guarantee
+   * that Claude Code itself can run indefinitely if you raise it.
+   */
   defaultTimeoutMs?: number;
   /** Permission mode. Default: "plan" (read-only tools) */
   permissionMode?: "plan" | "bypassPermissions";
@@ -98,10 +102,14 @@ export class ClaudeCliRuntime implements Runtime {
     }
 
     // Pass system prompt via --system-prompt flag (not concatenated into user prompt)
-    // This prevents Claude from confusing system instructions with user content
-    if (request.systemPrompt) {
-      args.push("--system-prompt", request.systemPrompt);
-    }
+    // This prevents Claude from confusing system instructions with user content.
+    // Always include a safety guardrail so the response text is non-empty even in
+    // plan mode / when the step has no explicit system prompt.
+    const DEFAULT_SAFETY = "Provide your complete response as plain text in the response body. Do not write files or create artifacts as a substitute for returning text. If tools are allowed you may inspect or modify files when that materially helps, but you must still return the final deliverable in your response.";
+    const systemPrompt = request.systemPrompt
+      ? `${request.systemPrompt}\n\n${DEFAULT_SAFETY}`
+      : DEFAULT_SAFETY;
+    args.push("--system-prompt", systemPrompt);
 
     // Build the user prompt
     let userPrompt = request.prompt;
@@ -111,9 +119,6 @@ export class ClaudeCliRuntime implements Runtime {
       userPrompt += `\n\nRespond with ONLY a JSON object matching this schema, no other text:\n${JSON.stringify(zodToJsonSchema(request.outputSchema), null, 2)}`;
     }
 
-    // Add explicit instruction to return content as the result, not write to files
-    userPrompt += "\n\nIMPORTANT: Return your full response as text output. Do NOT write to files or use plan mode. Your response text IS the deliverable.";
-
     const raw = await this.#spawn(args, userPrompt, timeoutMs);
     const durationMs = Date.now() - startMs;
 
@@ -122,10 +127,17 @@ export class ClaudeCliRuntime implements Runtime {
     try {
       parsed = JSON.parse(raw) as ClaudeCliJsonResponse;
     } catch {
-      // If JSON parse fails, treat raw output as plain text
+      // If JSON parse fails, treat raw output as plain text.
+      // Best-effort regex extraction of token counts so we don't silently
+      // lose usage accounting on malformed CLI output.
+      const inMatch = raw.match(/"input_tokens"\s*:\s*(\d+)/);
+      const outMatch = raw.match(/"output_tokens"\s*:\s*(\d+)/);
       return {
         text: raw.trim(),
-        usage: { inputTokens: 0, outputTokens: 0 },
+        usage: {
+          inputTokens: inMatch ? parseInt(inMatch[1], 10) : 0,
+          outputTokens: outMatch ? parseInt(outMatch[1], 10) : 0,
+        },
         costUsd: null,
         durationMs,
         model: "unknown",

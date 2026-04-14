@@ -2,7 +2,7 @@
 
 **Composable AI task pipelines — Zod for LLM workflows.**
 
-Define steps with typed schemas. Compose with loops, branches, maps. Analyze cost before running. Get full execution traces. Same pipeline runs on Claude CLI (free) or API (production).
+Define steps with typed schemas. Compose with loops, branches, maps. Inspect prompt footprint and risk before running. Get full execution traces. Same pipeline runs on Claude CLI (free) or API (production).
 
 ```
 npm install claudeflow
@@ -53,7 +53,7 @@ When you ask Claude to do a complex multi-step task, it fails. No persistent sta
 
 - **Composable** — steps, loops, branches, maps
 - **Typed** — Zod schemas validate every step boundary
-- **Analyzable** — predict tokens, cost, and time before running
+- **Analyzable** — inspect prompt footprint, pricing scenarios, and runtime risk before running
 - **Observable** — full trace with timing, tokens, cost per step
 - **Testable** — MockRuntime for zero-token development, validate() for static checks
 - **Portable** — same pipeline runs on CLI (free) or API (production)
@@ -95,9 +95,9 @@ const result = await loadYaml("investigate-bug.yaml").run(
 );
 ```
 
-## Analyze before running
+## Inspect before running
 
-Like a compiler — predict cost and time without burning tokens:
+Use the static planner to inspect structure and rough pricing scenarios before spending tokens:
 
 ```typescript
 import { analyze, formatAnalysis } from "claudeflow";
@@ -108,17 +108,52 @@ console.log(formatAnalysis(analyze(myPipeline)));
 Pipeline: digest
 Steps: 2 (2 LLM, 0 deterministic)
 
-Token estimate:
+Prompt footprint heuristic:
   Input:  ~620 (496-930)
   Output: ~90 (45-180)
 
-Cost estimate:
-  claude-sonnet-4-6: $0.0033/run
-  claude-haiku-4-5: $0.0009/run
+Pricing scenarios (heuristic):
+  configured/default pricing: $0.0033 baseline, $0.0033 retry upper bound
+  if unpinned steps use claude-haiku-4-5: $0.0009 baseline, $0.0009 retry upper bound
 
 Warnings:
-  - Step "classify" has no retry config
+  - Step "classify" has no retry config - one failed LLM call ends that step
 ```
+
+Treat this as planning guidance, not telemetry. `analyze()` does not know your runtime inputs,
+tool outputs, map cardinality, loop exit conditions, or upstream provider behavior.
+
+## Long-Running Tasks
+
+ClaudeFlow can orchestrate long jobs, but it cannot make Claude Code run forever.
+
+- `defaultTimeoutMs` is ClaudeFlow's wrapper timeout for one step, not a guarantee that the CLI or provider will allow unlimited runtime.
+- Claude Code/Max jobs can still stop because of usage resets, capacity, or backend limits.
+- For long jobs, prefer smaller steps plus checkpoints over one giant reviewer/editor step.
+- If a step regularly pushes the timeout ceiling, split it instead of just increasing the timeout again.
+- Use retries for transient failures and checkpoints for expensive multi-step work.
+
+Recommended pattern for long jobs:
+
+```typescript
+import { loadYaml, ClaudeCliRuntime, CheckpointManager } from "claudeflow";
+
+const pipeline = loadYaml("pipelines/overnight-review.yaml");
+const runtime = new ClaudeCliRuntime({
+  cwd: "/path/to/project",
+  permissionMode: "plan",
+  defaultTimeoutMs: 1_200_000, // generous wrapper timeout, not "infinite"
+});
+const checkpoint = new CheckpointManager(".claudeflow/checkpoints");
+
+await pipeline.run({}, { runtime, checkpoint, verbose: true });
+```
+
+Rule of thumb:
+- use `analyze()` to spot risky structure before execution
+- use `retry` for flaky steps
+- use `checkpoint` for expensive pipelines
+- split the step if one prompt is doing too much
 
 ## Testing without tokens
 
@@ -159,7 +194,7 @@ traces/self-audit-2026-04-12.json
 src/core/       → Step, Pipeline, Context, Schema
 src/control/    → Loop, Branch, Map + shared resolve helper
 src/runtime/    → ClaudeCliRuntime, ClaudeApiRuntime, MockRuntime
-src/analyzer/   → Token/cost/time prediction
+src/analyzer/   → Static planning heuristics
 src/loader/     → YAML parser, prompt interpolation
 src/testing/    → validate(), benchmark()
 ```

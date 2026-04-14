@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { step, pipeline, z, analyze, formatAnalysis, loop, branch } from "../../src/index.js";
+import { step, pipeline, z, analyze, formatAnalysis, loop, branch, optimize } from "../../src/index.js";
 
 describe("analyzer", () => {
   it("analyzes a simple two-step pipeline", () => {
@@ -15,8 +15,8 @@ describe("analyzer", () => {
     expect(report.deterministicStepCount).toBe(0);
     expect(report.estimatedTokens.input.expected).toBeGreaterThan(0);
     expect(report.estimatedTokens.output.expected).toBeGreaterThan(0);
-    expect(report.estimatedCost["claude-sonnet-4-6"].perRun).toBeGreaterThan(0);
-    expect(report.estimatedDuration.sequentialMs).toBe(10000); // 2 simple LLM steps × 5s
+    expect(report.estimatedCost["configured/default"].perRun).toBeGreaterThan(0);
+    expect(report.runtimePredictability).toBe("high");
   });
 
   it("detects warnings for steps without schema or retry", () => {
@@ -25,8 +25,8 @@ describe("analyzer", () => {
 
     const report = analyze(p);
 
-    expect(report.schemaWarnings).toContain('Step "bare" has no output schema — output won\'t be validated');
-    expect(report.schemaWarnings).toContain('Step "bare" has no retry config — single attempt only');
+    expect(report.schemaWarnings).toContain('Step "bare" has no output schema - output will not be validated');
+    expect(report.schemaWarnings).toContain('Step "bare" has no retry config - one failed LLM call ends that step');
   });
 
   it("counts deterministic steps separately", () => {
@@ -38,7 +38,7 @@ describe("analyzer", () => {
 
     expect(report.llmStepCount).toBe(1);
     expect(report.deterministicStepCount).toBe(1);
-    expect(report.estimatedDuration.sequentialMs).toBe(5001); // 1 simple LLM × 5s + 1 det × 1ms
+    expect(report.runtimePredictability).toBe("high");
   });
 
   it("extracts required tools", () => {
@@ -58,6 +58,7 @@ describe("analyzer", () => {
     const report = analyze(p);
     expect(report.controlFlowNodes).toBe(1);
     expect(report.llmStepCount).toBe(1); // loop contains 1 LLM step
+    expect(report.runtimePredictability).toBe("medium");
   });
 
   it("includes branch steps in analysis", () => {
@@ -69,6 +70,23 @@ describe("analyzer", () => {
     const report = analyze(p);
     expect(report.controlFlowNodes).toBe(1);
     expect(report.llmStepCount).toBe(2); // both branches analyzed
+    expect(report.runtimePredictability).toBe("medium");
+  });
+
+  it("includes optimize nodes in analysis", () => {
+    const mutate = step("mutate").prompt("improve").retry({ maxAttempts: 2 });
+    const evalStep = step("measure").fn(() => ({ score: 1 }));
+    const p = pipeline("optimize-analysis").optimize(
+      optimize(mutate, evalStep, { metricKey: "score", direction: "higher", maxIterations: 5 }),
+    );
+
+    const report = analyze(p);
+
+    expect(report.controlFlowNodes).toBe(1);
+    expect(report.optimizeCount).toBe(1);
+    expect(report.stepCount).toBe(2);
+    expect(report.runtimePredictability).toBe("low");
+    expect(report.schemaWarnings).toContain("Optimize node can iterate up to 5 times based on feedback");
   });
 
   it("formats analysis as readable text", () => {
@@ -79,18 +97,18 @@ describe("analyzer", () => {
 
     expect(text).toContain("Pipeline: format-test");
     expect(text).toContain("Steps: 1");
-    expect(text).toContain("Token estimate:");
-    expect(text).toContain("Cost estimate:");
-    expect(text).toContain("Time estimate:");
+    expect(text).toContain("Prompt footprint heuristic:");
+    expect(text).toContain("Pricing scenarios (heuristic):");
+    expect(text).toContain("Runtime predictability:");
   });
 
-  it("estimates higher cost for Opus vs Haiku", () => {
+  it("prices alternate scenarios for unpinned steps", () => {
     const s = step("think").prompt("think deeply about this");
     const p = pipeline("cost-compare").step(s);
 
     const report = analyze(p);
-    const opus = report.estimatedCost["claude-opus-4-6"];
-    const haiku = report.estimatedCost["claude-haiku-4-5"];
+    const opus = report.estimatedCost["if-unpinned=claude-opus-4-6"];
+    const haiku = report.estimatedCost["if-unpinned=claude-haiku-4-5"];
 
     expect(opus.perRun).toBeGreaterThan(haiku.perRun);
   });

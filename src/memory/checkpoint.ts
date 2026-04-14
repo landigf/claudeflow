@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, openSync, writeSync, fsyncSync, closeSync } from "node:fs";
 import path from "node:path";
 import type { StepTrace } from "../observability/trace.js";
 
@@ -22,10 +22,16 @@ export class CheckpointManager {
     }
   }
 
-  /** Save checkpoint after a step completes. */
+  /** Save checkpoint after a step completes, with fsync for durability. */
   save(runId: string, checkpoint: Checkpoint): void {
     const filePath = this.#checkpointPath(runId);
-    writeFileSync(filePath, JSON.stringify(checkpoint, null, 2));
+    const fd = openSync(filePath, "w");
+    try {
+      writeSync(fd, JSON.stringify(checkpoint, null, 2));
+      fsyncSync(fd);
+    } finally {
+      closeSync(fd);
+    }
   }
 
   /** Load checkpoint for a pipeline run. Returns undefined if no checkpoint. */

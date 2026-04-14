@@ -372,9 +372,9 @@ steps:
 
 ---
 
-## 13. Analyze Pipeline Cost Before Running
+## 13. Inspect Pipeline Before Running
 
-**When:** You want to know how much a pipeline will cost before spending anything.
+**When:** You want a static read on structure, prompt footprint, and rough pricing before spending anything.
 
 ```bash
 npx claudeflow analyze pipelines/improve-self.yaml
@@ -384,14 +384,18 @@ Output:
 ```
 Pipeline: improve-claudeflow
 Steps: 3 (3 LLM, 0 deterministic)
-Token estimate: ~991 (793-1487)
-Cost estimate:
-  claude-opus-4-6: $0.0411/run
-  claude-haiku-4-5: $0.0022/run
-Time estimate: ~100.0s
+Prompt footprint heuristic:
+  Input:  ~991 (793-1487)
+Pricing scenarios (heuristic):
+  configured/default pricing: $0.0089 baseline, $0.0178 retry upper bound
+Runtime predictability: medium
 ```
 
-**Tip:** Use per-step model selection to cut costs. Research steps use Haiku ($0.80/M), analysis uses Sonnet ($3/M), critical decisions use Opus ($15/M).
+**Tip:** Treat this output as planning guidance, not telemetry. It is useful for spotting unpinned models, risky control flow, and tool-heavy steps before execution.
+
+**Important:** This static planner does not predict exact wall-clock runtime. It cannot see
+real prompt expansions, tool output volume, loop exit conditions, map fanout, or provider-side
+limits. Use it to detect risk, not to promise completion time.
 
 ---
 
@@ -412,6 +416,9 @@ await myPipeline.run(input, { runtime, checkpoint });
 ```
 
 No wasted tokens. No re-running steps 1-6. Checkpoint is a JSON file you can inspect.
+
+**Important:** Checkpointing is the right answer for long-running Claude Code jobs. Do not rely on
+"infinite timeout" behavior. A larger timeout can help, but if one step is still too big, split it.
 
 ---
 
@@ -465,6 +472,14 @@ await crew.run({ paper: "..." }, { runtime, checkpoint, memory });
 **Why this matters:** A 30-minute, 8-agent pipeline that crashes at agent 6 would cost ~$4 to restart from scratch. With checkpointing, you only pay for agent 6-8 (~$1.50). Memory means tomorrow's crew knows what yesterday's crew found.
 
 **Real example:** Our IMC 2026 paper review uses an 8-expert crew. Each run produces a trace file with every reviewer's feedback. When one agent times out, the next run resumes from the checkpoint.
+
+**Design rule:** if one reviewer regularly hits the timeout ceiling, do not just keep raising
+`defaultTimeoutMs`. Split that reviewer into smaller steps, for example:
+- artifact audit → badge assessment
+- synthesize findings → write final meta-review
+- inspect paper → edit paper → rebuild → validate
+
+This is more reliable than trying to guess a "safe" infinite runtime.
 
 ---
 

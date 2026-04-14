@@ -1,9 +1,7 @@
 #!/usr/bin/env npx tsx
 /**
- * Run the 8-expert IMC acceptance crew on the AgentWebBench paper.
- * This is the comprehensive review — every dimension IMC evaluates.
- *
- * Run: npx tsx examples/imc-crew.ts
+ * Run the full 8-expert IMC crew on the revised paper and save the results
+ * under a post-revision-specific prefix so earlier review runs are preserved.
  */
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -13,11 +11,9 @@ import { createToolRegistry } from "../src/tools/index.js";
 const PAPER_DIR = "/Users/landigf/Desktop/Code/Research/SpotAIfy/research/agent-traffic/paper";
 
 console.log("╔══════════════════════════════════════════════════════════════╗");
-console.log("║  ClaudeFlow → 8-Expert IMC Acceptance Crew                   ║");
-console.log("║  Target: Strong Accept (4+/5) at ACM IMC 2026                ║");
+console.log("║  ClaudeFlow → Post-Revision IMC Crew                        ║");
 console.log("╚══════════════════════════════════════════════════════════════╝");
-console.log(`\nPaper: ${PAPER_DIR}`);
-console.log(`Deadline: Abstract Apr 22, Paper Apr 29\n`);
+console.log(`\nPaper: ${PAPER_DIR}\n`);
 
 const p = loadYaml(path.join(import.meta.dirname, "../pipelines/imc-acceptance-crew.yaml"));
 
@@ -28,28 +24,26 @@ console.log("");
 const runtime = new ClaudeCliRuntime({
   cwd: PAPER_DIR,
   permissionMode: "plan",
-  defaultTimeoutMs: 1_200_000, // 20 min per agent for full-paper reviews
+  defaultTimeoutMs: 1_200_000,
 });
 
 const tools = createToolRegistry();
-const checkpoint = new CheckpointManager(path.join(import.meta.dirname, "../.claudeflow/imc-crew/checkpoints"));
+const checkpoint = new CheckpointManager(path.join(import.meta.dirname, "../.claudeflow/imc-post-revision-crew/checkpoints"));
 
-console.log("=== Running 8 Expert Agents ===\n");
+console.log("=== Running 8 Expert Agents on Revised Draft ===\n");
 const startTime = Date.now();
 const result = await p.run({}, { runtime, verbose: true, tools, checkpoint });
 const stamp = new Date().toISOString().slice(0, 19).replace(/:/g, "-");
 
-// Save trace
-const tracePath = path.join(import.meta.dirname, `../traces/imc-crew-${stamp}.json`);
+const tracePath = path.join(import.meta.dirname, `../traces/imc-post-revision-crew-${stamp}.json`);
 writeFileSync(tracePath, JSON.stringify({
   ...result.trace,
   startedAt: result.trace.startedAt.toISOString(),
   finishedAt: result.trace.finishedAt.toISOString(),
 }, null, 2));
 
-// Save readable reviews
-const reviewPath = path.join(import.meta.dirname, `../traces/imc-crew-${stamp}-reviews.md`);
-const reviews: string[] = ["# IMC 2026 — 8-Expert Review Crew\n"];
+const reviewPath = path.join(import.meta.dirname, `../traces/imc-post-revision-crew-${stamp}-reviews.md`);
+const reviews: string[] = ["# IMC Post-Revision 8-Expert Review Crew\n"];
 for (const step of result.trace.steps) {
   if (step.outputSnapshot && typeof step.outputSnapshot === "string") {
     reviews.push(`## ${step.stepId}\n\n${step.outputSnapshot}\n\n---\n`);

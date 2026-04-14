@@ -85,3 +85,7 @@ console.log(`\nTrace saved: ${tracePath}`);
 console.log(`Status: ${result.trace.status}`);
 console.log(`Duration: ${(result.trace.totalDurationMs / 1000).toFixed(1)}s`);
 console.log(`Cost: $${result.trace.totalCostUsd.toFixed(4)}`);
+
+if (result.trace.status !== "completed") {
+  process.exitCode = 1;
+}

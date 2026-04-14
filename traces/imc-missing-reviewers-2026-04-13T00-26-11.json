@@ -1,0 +1,23 @@
+{
+  "runId": "80qtIcFyoZM929qW23V54",
+  "pipelineName": "imc-missing-reviewers",
+  "status": "failed",
+  "startedAt": "2026-04-13T00:21:11.931Z",
+  "finishedAt": "2026-04-13T00:26:11.940Z",
+  "totalDurationMs": 300009,
+  "totalTokens": {
+    "inputTokens": 0,
+    "outputTokens": 0
+  },
+  "totalCostUsd": 0,
+  "steps": [
+    {
+      "stepId": "imc-chair",
+      "stepName": "imc-chair",
+      "status": "failed",
+      "durationMs": 0,
+      "attempts": [],
+      "inputSnapshot": {}
+    }
+  ]
+}

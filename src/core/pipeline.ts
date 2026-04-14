@@ -674,6 +674,22 @@ export class PipelineDef {
         continue;
       }
 
+      // Detect empty results and retry. Empty text almost always means Claude
+      // silently wrote a file instead of returning the deliverable — treat as retriable.
+      if (!response.text || response.text.trim().length === 0) {
+        lastError = `Step "${stepDef.id}" returned empty result (attempt ${attempt}/${maxAttempts})`;
+        attempts.push({
+          attemptNumber: attempt,
+          prompt,
+          response: "",
+          usage: response.usage,
+          costUsd: response.costUsd,
+          durationMs: Date.now() - attemptStart,
+          error: lastError,
+        });
+        continue;
+      }
+
       // Parse structured output
       let output: unknown = response.structured ?? response.text;
       if (stepDef.outputSchema && !response.structured) {

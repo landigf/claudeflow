@@ -78,7 +78,7 @@ The trace proves what happened: which bugs were found, what was fixed, that test
 | Multi-step work (implement + verify) | ClaudeFlow | Retries, verification, traces |
 | Repeated task (daily/weekly) | ClaudeFlow | Reusable YAML, consistent results |
 | Team work | ClaudeFlow | Pipeline is reviewable in PRs |
-| Budget-sensitive | ClaudeFlow | Analyzer predicts cost before running |
+| Budget-sensitive | ClaudeFlow | Static planner shows footprint, pricing scenarios, and risk before running |
 | Overnight/long tasks | ClaudeFlow | Checkpoints, partial results on failure |
 
 ## The real value
@@ -89,7 +89,7 @@ It's not just about speed or cost. It's about:
 2. **Structure** — typed outputs you can process programmatically, not walls of text.
 3. **Reliability** — retries and verification steps. Raw CLI: one failure = nothing. ClaudeFlow: step 2 fails, retry, continue.
 4. **Reusability** — define once as YAML, run daily. Raw CLI: retype every time.
-5. **Predictability** — the analyzer tells you cost/time before running. No surprises.
+5. **Predictability** — the static planner surfaces structure, retries, and pricing assumptions before running.
 
 ## Cost analysis
 

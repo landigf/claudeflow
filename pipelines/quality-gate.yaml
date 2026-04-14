@@ -33,12 +33,20 @@ steps:
       Read CLAUDE.md and verify every claim matches the actual code.
       Check: are all 6 node types documented? Are all tools listed?
       Check: does package.json have correct exports and bin field?
+      Check: are heuristic/static planning features clearly labeled as heuristic instead of
+      being marketed as precise runtime prediction?
+      Check: do docs overpromise guarantees the implementation does not actually provide?
+      Check: are unfinished or experiment-only ideas being presented as shipped/complete?
+      Check: if something clearly needs data, ML, or further experiments, is it framed as a plan
+      rather than a finished capability?
 
       Report:
       - Types: pass/fail
       - Tests: pass/fail (count)
       - Docs accuracy: score 1-10
       - Export correctness: pass/fail
+      - Heuristic honesty: pass/fail
+      - Experiment honesty: pass/fail
       - Overall: ready/not ready
     output:
       types_pass: boolean
@@ -46,6 +54,8 @@ steps:
       test_count: number
       docs_score: number
       exports_ok: boolean
+      heuristics_honest: boolean
+      experiments_honest: boolean
       ready: boolean
       issues:
         type: array

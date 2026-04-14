@@ -1,0 +1,243 @@
+# Apply the overnight IMC reviews to the AgentWebBench paper, rebuild artifacts,
+# and prepare a fresh validation review on the revised draft.
+
+name: imc-overnight-revision
+description: Synthesize IMC feedback, revise the paper, rebuild, audit, and hand off a stronger draft
+version: "1.0.0"
+
+steps:
+  - id: synthesize-review-direction
+    system: |
+      You are an IMC area chair and paper shepherd preparing a borderline paper for acceptance.
+      Your job is to extract the true consensus from multiple reviewer personas, identify the
+      highest-leverage changes, and separate supported edits from requests that would require
+      new data or new experiments.
+    prompt: |
+      You are operating inside the paper repository at `{paper_dir}`.
+      Review artifacts from the overnight run live under `{trace_dir}`.
+
+      Use Bash and Read to inspect the latest relevant review artifacts, including:
+      - `imc-crew-*-reviews.md`
+      - `imc-crew-round2-*-reviews.md`
+      - `imc-missing-reviewers-*.json` and/or `imc-missing-reviewers-*-reviews.md`
+      - `paper-review-*-reviews.md`
+      - any prior `imc-post-revision-crew-*-reviews.md` if present
+
+      Then read the current paper materials:
+      - `benchmark-paper.tex`
+      - `refs.bib`
+      - `artifact_snapshot.json`
+      - `README.md`
+      - `REVIEW-PROMPT.md`
+      - `SUBMISSION-CHECKLIST.md`
+
+      Produce a consensus synthesis for the next overnight revision.
+
+      Rules:
+      - Weight issues raised independently by multiple reviewers most heavily.
+      - Prefer edits that improve IMC acceptance probability without requiring new data.
+      - Never invent results, experiments, citations, or artifact capabilities.
+      - If a reviewer request needs new collection or a new experiment, mark it as unsupported
+        for this overnight run and prescribe a framing/claim-scope downgrade instead.
+      - Extract the paper direction reviewers are converging on: what this paper should claim,
+        what it should stop claiming, and what evidence it must foreground.
+    tools: [Read, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 600000
+    output:
+      acceptance_direction: string
+      must_fix:
+        type: array
+        items: string
+      high_roi_edits:
+        type: array
+        items: string
+      unsupported_requests:
+        type: array
+        items: string
+      validation_focus:
+        type: array
+        items: string
+
+  - id: apply-core-revision
+    system: |
+      You are a senior systems researcher, empirical-methods editor, and LaTeX coauthor.
+      Apply the best available review suggestions directly to the paper using only evidence already
+      present in the repository. You are judged on honesty, precision, and publication readiness.
+    prompt: |
+      Use the overnight synthesis below to revise the paper immediately:
+
+      {synthesize-review-direction}
+
+      Edit the paper repository directly. Allowed edits:
+      - `benchmark-paper.tex`
+      - `refs.bib`
+      - `imc-abstract.txt`
+      - `README.md`
+      - `REVIEW-PROMPT.md`
+      - `SUBMISSION-CHECKLIST.md`
+      - `build_artifacts.py` if needed to keep artifact regeneration aligned with the current release
+      - generated files under `figures/` only if you regenerate them from checked-in scripts/data
+
+      Hard constraints:
+      - Do not modify raw datasets or raw cache-sim inputs/results outside the paper directory.
+      - Do not fabricate new data, baselines, or experiments.
+      - If reviewers ask for something unsupported tonight, downscope the claim, improve the caveat,
+        or move it to limitations/future work instead of pretending it exists.
+      - Prioritize repeated review themes: framing honesty, claim-evidence alignment, related-work
+        positioning, geographic-confound wording, cache-claim scope, and abstract/introduction/
+        conclusion consistency.
+      - Fix stale auxiliary text too: the paper-facing README, review prompt, and checklist must
+        match the current release and paper claims after your edits.
+
+      Apply the highest-leverage changes now. Return a concise but concrete summary with:
+      1. Files changed
+      2. Major edits made
+      3. Reviewer concerns addressed
+      4. Remaining issues that still need new evidence or experiments
+    tools: [Read, Write, Edit, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 1200000
+
+  - id: rebuild-after-core
+    tool: shell
+    action: run
+    params:
+      cwd: "{paper_dir}"
+      timeout: 1200000
+      command: |
+        set -euo pipefail
+        if [ -x "../../../../.venv/bin/python" ]; then
+          PYTHON_BIN="../../../../.venv/bin/python"
+        else
+          PYTHON_BIN="python3"
+        fi
+        RELEASE="$("$PYTHON_BIN" -c 'import json; print(json.load(open("artifact_snapshot.json"))["release"])')"
+        "$PYTHON_BIN" build_artifacts.py --release "$RELEASE"
+        latexmk -pdf -interaction=nonstopmode benchmark-paper.tex
+        if command -v pdfinfo >/dev/null 2>&1; then
+          pdfinfo benchmark-paper.pdf | rg '^(Pages|Author):' || true
+        fi
+        rg -n "TODO|TBD|XXX" benchmark-paper.tex REVIEW-PROMPT.md SUBMISSION-CHECKLIST.md README.md || true
+
+  - id: audit-post-revision
+    system: |
+      You are a hostile IMC reviewer doing a final acceptance audit after the overnight edit pass.
+      Verify whether the revision actually fixed the cross-review consensus issues, not whether it
+      merely changed words.
+    prompt: |
+      Audit the revised paper after the core edit pass.
+
+      Inputs:
+      - Review consensus: {synthesize-review-direction}
+      - Core revision summary: {apply-core-revision}
+      - Build/check output: {rebuild-after-core}
+
+      Use Bash and Read as needed to inspect:
+      - `benchmark-paper.tex`
+      - `refs.bib`
+      - `README.md`
+      - `REVIEW-PROMPT.md`
+      - `SUBMISSION-CHECKLIST.md`
+      - `artifact_snapshot.json`
+      - `benchmark-paper.log`
+
+      Determine whether the repeated reviewer concerns were truly addressed.
+
+      Rules:
+      - Treat unresolved overclaiming or mismatched auxiliary docs as real blockers.
+      - Prefer exact, actionable blockers over vague criticism.
+      - Do not ask for new experiments unless the paper still makes a claim that genuinely requires them.
+    tools: [Read, Bash]
+    timeout: 600000
+    output:
+      addressed_items:
+        type: array
+        items: string
+      remaining_blockers:
+        type: array
+        items: string
+      unresolved_experiments:
+        type: array
+        items: string
+      validation_focus:
+        type: array
+        items: string
+      verdict: string
+
+  - id: apply-followup-fixes
+    system: |
+      You are the final overnight revision pass. Be surgical, high-confidence, and evidence-bound.
+      Only fix blockers that can be resolved with the existing repository contents.
+    prompt: |
+      The audit found these remaining issues:
+
+      {audit-post-revision}
+
+      Make one more focused pass over the paper and auxiliary files.
+
+      Rules:
+      - Fix only blockers that can be honestly resolved tonight.
+      - Do not broaden the paper or introduce unsupported claims.
+      - If an issue cannot be fixed without new data, make the paper more explicit about that limit
+        instead of leaving an ambiguous claim in place.
+      - Keep changes coherent with the core revision.
+
+      Return a concise summary of what you changed and what still remains for a future experiment pass.
+    tools: [Read, Write, Edit, Bash]
+    retry:
+      maxAttempts: 2
+      backoff: fixed
+      baseDelayMs: 5000
+    timeout: 900000
+
+  - id: rebuild-after-followups
+    tool: shell
+    action: run
+    params:
+      cwd: "{paper_dir}"
+      timeout: 1200000
+      command: |
+        set -euo pipefail
+        if [ -x "../../../../.venv/bin/python" ]; then
+          PYTHON_BIN="../../../../.venv/bin/python"
+        else
+          PYTHON_BIN="python3"
+        fi
+        RELEASE="$("$PYTHON_BIN" -c 'import json; print(json.load(open("artifact_snapshot.json"))["release"])')"
+        "$PYTHON_BIN" build_artifacts.py --release "$RELEASE"
+        latexmk -pdf -interaction=nonstopmode benchmark-paper.tex
+        if command -v pdfinfo >/dev/null 2>&1; then
+          pdfinfo benchmark-paper.pdf | rg '^(Pages|Author):' || true
+        fi
+        rg -n "TODO|TBD|XXX" benchmark-paper.tex REVIEW-PROMPT.md SUBMISSION-CHECKLIST.md README.md || true
+
+  - id: overnight-handoff
+    system: |
+      You are writing the detailed overnight handoff that the authors will read in the morning.
+      Be concrete, complete, and oriented toward IMC acceptance.
+    prompt: |
+      Summarize the final state of the overnight revision.
+
+      Inputs:
+      - Review consensus: {synthesize-review-direction}
+      - Core revision summary: {apply-core-revision}
+      - Audit: {audit-post-revision}
+      - Follow-up summary: {apply-followup-fixes}
+      - Final build output: {rebuild-after-followups}
+
+      Write a detailed handoff with these sections:
+      1. Paper direction reviewers converged on
+      2. Changes actually applied overnight
+      3. Which reviewer concerns are now addressed
+      4. Remaining risks that still require new experiments or collection
+      5. Exact things the post-revision crew should verify
+      6. Exact next-day tasks for the authors, ranked by impact
+
+      The handoff must be specific enough that the authors can resume work immediately.
