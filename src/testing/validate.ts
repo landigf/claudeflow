@@ -64,9 +64,7 @@ export function validate(pipeline: PipelineDef): ValidationError[] {
   }
 
   // Check for duplicate step IDs
-  const ids = pipeline.nodes
-    .filter((n) => n.type === "step")
-    .map((n) => n.step.id);
+  const ids = pipeline.nodes.filter((n) => n.type === "step").map((n) => n.step.id);
   const seen = new Set<string>();
   for (const id of ids) {
     if (seen.has(id)) {

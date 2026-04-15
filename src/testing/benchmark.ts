@@ -1,4 +1,4 @@
-import type { PipelineDef, PipelineRunOptions, PipelineResult } from "../core/pipeline.js";
+import type { PipelineDef, PipelineResult, PipelineRunOptions } from "../core/pipeline.js";
 
 export interface BenchmarkOptions {
   /** Number of runs. Default: 10 */

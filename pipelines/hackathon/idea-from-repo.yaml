@@ -1,0 +1,21 @@
+name: hackathon-idea-from-repo
+steps:
+  - id: repo-scan
+    prompt: |
+      Read the current repository and summarize the product, current capabilities, and obvious gaps.
+      Theme: {theme}
+      Constraints: {constraints}
+    tools: [Read, Glob, Grep]
+    output:
+      repo_summary: string
+      opportunities:
+        type: array
+        items: string
+
+  - id: idea-pack
+    prompt: |
+      Using this repo summary: {repo-scan.repo_summary}
+      Opportunities: {repo-scan.opportunities}
+      Generate 5 grounded hackathon ideas with user value, demo hook, and feasibility.
+    output:
+      report: string

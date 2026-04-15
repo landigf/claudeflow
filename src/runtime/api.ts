@@ -1,3 +1,4 @@
+import { zodToJsonSchema } from "./schema.js";
 import type { Runtime, RuntimeRequest, RuntimeResponse } from "./types.js";
 
 export interface ClaudeApiRuntimeOptions {
@@ -15,7 +16,7 @@ export interface ClaudeApiRuntimeOptions {
 const PRICING: Record<string, { input: number; output: number }> = {
   "claude-opus-4-20250514": { input: 15, output: 75 },
   "claude-sonnet-4-20250514": { input: 3, output: 15 },
-  "claude-haiku-4-5-20251001": { input: 0.8, output: 4 },
+  "claude-haiku-4-5-20251001": { input: 1, output: 5 },
 };
 
 /**
@@ -49,7 +50,7 @@ export class ClaudeApiRuntime implements Runtime {
     // Build the prompt with schema instructions if needed
     let userContent = request.prompt;
     if (request.outputSchema) {
-      userContent += "\n\nRespond with ONLY a valid JSON object. No markdown, no explanation.";
+      userContent += `\n\nRespond with ONLY a JSON object matching this schema, no other text:\n${JSON.stringify(zodToJsonSchema(request.outputSchema), null, 2)}`;
     }
 
     const body: Record<string, unknown> = {
@@ -103,7 +104,8 @@ export class ClaudeApiRuntime implements Runtime {
       const inputTokens = data.usage?.input_tokens ?? 0;
       const outputTokens = data.usage?.output_tokens ?? 0;
       const pricing = PRICING[model] ?? PRICING["claude-sonnet-4-20250514"];
-      const costUsd = (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
+      const costUsd =
+        (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
 
       // Try structured output parsing
       let structured: unknown;
@@ -138,15 +140,27 @@ function extractJsonObject(text: string): string | undefined {
   if (start === -1) return undefined;
   let depth = 0;
   let inString = false;
-  let escape = false;
+  let escaped = false;
   for (let i = start; i < text.length; i++) {
     const ch = text[i];
-    if (escape) { escape = false; continue; }
-    if (ch === "\\" && inString) { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
     if (inString) continue;
     if (ch === "{") depth++;
-    else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
   }
   return undefined;
 }

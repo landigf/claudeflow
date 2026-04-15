@@ -1,0 +1,99 @@
+# Pipeline: medtransfer-second-product
+# 4 personas × 4 different models. Each produces 4-6 product ideas.
+#
+# Run manually (one curl per persona) OR via claudeflow when wiring is ready.
+# Spec-only for now: the prompts below are sourced from this YAML and executed
+# via direct OpenAI/Gemini API calls in ../scripts/run-brainstorm.sh.
+
+name: medtransfer-second-product
+description: 4-persona brainstorm for a complementary product beyond QR+OTP delivery
+version: "1.0.0"
+budget_usd_max: 11
+runtimes:
+  clinic_digital: { provider: openai,  model: gpt-4o-mini,         budget: 1.5 }
+  patient_65plus: { provider: gemini,  model: gemini-2.0-flash,    budget: 2.0 }
+  mmg_doctor:     { provider: gemini,  model: gemini-2.5-pro,      budget: 4.0 }
+  dpo_director:   { provider: openai,  model: gpt-4o-mini,         budget: 1.5 }
+
+personas:
+  clinic_digital:
+    background: |
+      Sei il direttore IT di una clinica diagnostica privata italiana
+      (imaging + esami lab). Gestisci 300 esami/mese. Hai già un
+      gestionale proprietario (es. iMed, GoPenta, Softproget) che:
+      - Archivia referti e immagini
+      - Ha un portale paziente basic (login con codice fiscale)
+      - Promette integrazione FSE "entro 6 mesi"
+      La clinica paga €600-1200/mese al vendor software. Il tuo budget per
+      nuovi tool è €50-200/mese senza chiedere approvazione.
+    frustrations: |
+      - Il vendor è lento sugli update, non puoi chiedere nuove feature
+      - I pazienti 65+ chiamano la segreteria per chiedere "come scarico"
+      - Il DPO chiede log di accesso che il portale non fornisce
+      - Non hai mai chiarezza su chi conserva i dati e dove
+      - Gli invii di referti ai medici curanti avvengono via email (non compliant)
+    prompt: |
+      In base a queste frustrations, proponi 4-6 idee di prodotto add-on
+      che affianchi al gestionale attuale (NON lo sostituisce). Per
+      ciascuna idea: problem, user_value, MVP_scope_weeks, pricing_suggested,
+      go_to_market_one_sentence, kill_risk (1-2 rischi che potrebbero far
+      fallire l'idea). Output JSON array.
+
+  patient_65plus:
+    background: |
+      Sei un paziente italiano di 68 anni. Hai fatto una risonanza magnetica
+      al ginocchio in una clinica privata. Ti hanno dato un CD + un foglio
+      con un codice QR per il portale digitale. Non hai SPID, non hai mai
+      usato pec, usi WhatsApp con tuo figlio.
+    frustrations: |
+      - Non so se il CD funzionerà sul computer del mio medico curante
+      - Il QR mi chiede codice fiscale e data di nascita ogni volta
+      - Mio figlio a Milano vuole vedere il referto ma non può accedere
+      - Quando torno in clinica per la visita ortopedica tra 2 settimane
+        non so se avrò ancora accesso online
+      - Ho perso il foglio col QR
+    prompt: |
+      Pensa in prima persona. Cosa vorresti che esistesse per semplificare
+      la tua vita coi referti medici? Proponi 4-6 idee concrete (può essere
+      uno strumento, un servizio, una feature). Per ciascuna: problem,
+      user_value_in_one_sentence, who_pays (io? la clinica? il SSN?),
+      MVP_scope_weeks, kill_risk.
+
+  mmg_doctor:
+    background: |
+      Sei un medico di medicina generale italiano, 55 anni, 1600 assistiti.
+      Ricevi ogni settimana 15-30 referti dai tuoi pazienti: via email con
+      PDF allegato, via WhatsApp screenshot, stampati in visita, CD che
+      non riesci sempre ad aprire. Hai un gestionale clinico tuo (tipo
+      Millewin o Softwindowstest) ma non è integrato col FSE regionale.
+    frustrations: |
+      - Pazienti mi inoltrano email con referti: non sono sicuro di poterli
+        salvare in cartella (GDPR)
+      - Non ho un inbox centralizzato — devo cercare nell'email, WhatsApp,
+        appunti stampati
+      - Vorrei annotare "visto, ordinato esame di controllo" sopra il referto
+      - Vorrei reindirizzare il referto allo specialista con un click
+      - Pazienti anziani mi chiamano perché "non riescono ad aprire il CD"
+    prompt: |
+      Proponi 4-6 strumenti digitali che userei volentieri come MMG per
+      gestire il flusso referti dai miei pazienti. Per ciascuno: problem,
+      user_value, MVP_scope_weeks, would_I_pay (€/mese realistico),
+      go_to_market, kill_risk.
+
+  dpo_director:
+    background: |
+      Sei il DPO esterno di 5 cliniche private diagnostiche in Lombardia
+      (tra 20 e 80 dipendenti ciascuna). Fatturi €400-800/mese per clinica.
+      Aggiornatissimo su GDPR, linee guida Garante, DPCM 3 dicembre 2013
+      conservazione, AgID.
+    frustrations: |
+      - Le cliniche mi chiedono "siamo a norma FSE?" e devo fare audit a mano
+      - I gestionali vendor non forniscono un registro Art. 30 GDPR stampabile
+      - Devo ricostruire i flussi dati a ogni audit interno
+      - Clienti chiedono DPA ma i vendor non sanno dare riscontro veloce
+      - Non esiste un "radar compliance" che mi avvisi di nuove normative
+    prompt: |
+      Quali asset di compliance-as-a-service pagherei (io o le cliniche)
+      volentieri? Proponi 4-6 idee. Per ciascuna: problem, value, MVP_scope,
+      price_per_clinic_per_month, who_buys (DPO? Direttore sanitario?),
+      kill_risk.

@@ -1,4 +1,14 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, openSync, writeSync, fsyncSync, closeSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  fsyncSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import path from "node:path";
 import type { StepTrace } from "../observability/trace.js";
 
@@ -42,12 +52,13 @@ export class CheckpointManager {
       try {
         const raw = readFileSync(path.join(this.#dir, file), "utf-8");
         const cp = JSON.parse(raw) as Checkpoint;
-        if (cp.pipelineName === pipelineName && (cp.status === "in_progress" || cp.status === "failed")) {
+        if (
+          cp.pipelineName === pipelineName &&
+          (cp.status === "in_progress" || cp.status === "failed")
+        ) {
           return cp;
         }
-      } catch {
-        continue;
-      }
+      } catch {}
     }
     return undefined;
   }

@@ -1,0 +1,10 @@
+name: hackathon-spec-from-brainstorm
+steps:
+  - id: draft-spec
+    prompt: |
+      Turn this brainstorm into a concise, implementation-ready specification:
+      {brainstorm}
+
+      Include goal, audience, scope, solution shape, and acceptance criteria.
+    output:
+      specification: string

@@ -1,0 +1,9 @@
+name: startup-improvement-backlog
+steps:
+  - id: backlog
+    prompt: |
+      Propose a ranked improvement backlog for this repository.
+      Include product, UX, engineering quality, and developer velocity items.
+    tools: [Read, Glob, Grep]
+    output:
+      backlog: string

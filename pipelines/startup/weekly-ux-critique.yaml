@@ -1,0 +1,9 @@
+name: startup-weekly-ux-critique
+steps:
+  - id: ux-review
+    prompt: |
+      Critique the product UX and onboarding based on the codebase, docs, and current flows.
+      Focus on clarity, friction, and opportunities for higher conversion or delight.
+    tools: [Read, Glob, Grep]
+    output:
+      critique: string

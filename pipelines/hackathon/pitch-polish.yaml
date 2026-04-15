@@ -1,0 +1,24 @@
+name: hackathon-pitch-polish
+steps:
+  - id: draft-pitch
+    prompt: |
+      Turn this project summary into a short hackathon pitch.
+      Project: {project}
+      Audience: judges and mentors
+    output:
+      pitch: string
+
+  - id: critique-pitch
+    prompt: |
+      Critique this pitch for clarity, credibility, and demo strength.
+      {draft-pitch.pitch}
+    output:
+      critique: string
+
+  - id: improve-pitch
+    prompt: |
+      Improve the pitch using this critique.
+      Pitch: {draft-pitch.pitch}
+      Critique: {critique-pitch.critique}
+    output:
+      final_pitch: string

@@ -15,12 +15,12 @@ export { EvalTool } from "./eval.js";
 export { PromptfooTool } from "./promptfoo.js";
 export { DspyTool } from "./dspy.js";
 
-import { ShellTool } from "./shell.js";
-import { GitHubTool } from "./github.js";
-import { FileTool } from "./file.js";
-import { EvalTool } from "./eval.js";
-import { PromptfooTool } from "./promptfoo.js";
 import { DspyTool } from "./dspy.js";
+import { EvalTool } from "./eval.js";
+import { FileTool } from "./file.js";
+import { GitHubTool } from "./github.js";
+import { PromptfooTool } from "./promptfoo.js";
+import { ShellTool } from "./shell.js";
 
 /** Create a registry of all built-in tools */
 export function createToolRegistry(): Map<string, ToolAdapter> {

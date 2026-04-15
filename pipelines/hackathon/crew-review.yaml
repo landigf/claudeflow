@@ -1,0 +1,25 @@
+name: hackathon-crew-review
+steps:
+  - id: reviewer-product
+    prompt: |
+      Review this feature idea and implementation plan from a product perspective.
+      Focus on user value, clarity, and demo strength.
+      {idea}
+    output:
+      review: string
+
+  - id: reviewer-technical
+    prompt: |
+      Review this feature idea and implementation plan from a technical perspective.
+      Focus on feasibility, execution risk, and missing details.
+      {idea}
+    output:
+      review: string
+
+  - id: synthesis
+    prompt: |
+      Combine these reviews into one actionable verdict.
+      Product review: {reviewer-product.review}
+      Technical review: {reviewer-technical.review}
+    output:
+      report: string

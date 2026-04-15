@@ -53,7 +53,8 @@ export class DspyTool implements ToolAdapter {
       metricPattern,
       iterations,
       strategy: "iterative_refinement",
-      description: "Use ClaudeFlow's optimize() loop with this config: mutate step rewrites the prompt, eval step runs the evalCommand and extracts the metric.",
+      description:
+        "Use ClaudeFlow's optimize() loop with this config: mutate step rewrites the prompt, eval step runs the evalCommand and extracts the metric.",
     };
   }
 
@@ -66,7 +67,8 @@ export class DspyTool implements ToolAdapter {
     const examples = params.examples as Array<{ input: string; expectedOutput?: string }>;
 
     if (!prompt) throw new Error("DspyTool.bootstrap: prompt is required");
-    if (!examples || !Array.isArray(examples)) throw new Error("DspyTool.bootstrap: examples array is required");
+    if (!examples || !Array.isArray(examples))
+      throw new Error("DspyTool.bootstrap: examples array is required");
 
     return {
       type: "bootstrap_config",
@@ -74,7 +76,8 @@ export class DspyTool implements ToolAdapter {
       exampleCount: examples.length,
       examples,
       strategy: "collect_demonstrations",
-      description: "Run the prompt on each example input, keep outputs that match expected patterns, use successful (input, output) pairs as few-shot demonstrations in the optimized prompt.",
+      description:
+        "Run the prompt on each example input, keep outputs that match expected patterns, use successful (input, output) pairs as few-shot demonstrations in the optimized prompt.",
     };
   }
 }

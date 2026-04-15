@@ -1,10 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { step, pipeline, z, analyze, formatAnalysis, loop, branch, optimize } from "../../src/index.js";
+import {
+  analyze,
+  branch,
+  formatAnalysis,
+  loop,
+  optimize,
+  pipeline,
+  step,
+  z,
+} from "../../src/index.js";
 
 describe("analyzer", () => {
   it("analyzes a simple two-step pipeline", () => {
-    const s1 = step("summarize").prompt("Summarize {url}").output(z.object({ summary: z.string() }));
-    const s2 = step("classify").prompt("Classify: {summarize.summary}").output(z.object({ category: z.string() }));
+    const s1 = step("summarize")
+      .prompt("Summarize {url}")
+      .output(z.object({ summary: z.string() }));
+    const s2 = step("classify")
+      .prompt("Classify: {summarize.summary}")
+      .output(z.object({ category: z.string() }));
     const p = pipeline("test").step(s1).step(s2);
 
     const report = analyze(p);
@@ -25,8 +38,12 @@ describe("analyzer", () => {
 
     const report = analyze(p);
 
-    expect(report.schemaWarnings).toContain('Step "bare" has no output schema - output will not be validated');
-    expect(report.schemaWarnings).toContain('Step "bare" has no retry config - one failed LLM call ends that step');
+    expect(report.schemaWarnings).toContain(
+      'Step "bare" has no output schema - output will not be validated',
+    );
+    expect(report.schemaWarnings).toContain(
+      'Step "bare" has no retry config - one failed LLM call ends that step',
+    );
   });
 
   it("counts deterministic steps separately", () => {
@@ -86,11 +103,16 @@ describe("analyzer", () => {
     expect(report.optimizeCount).toBe(1);
     expect(report.stepCount).toBe(2);
     expect(report.runtimePredictability).toBe("low");
-    expect(report.schemaWarnings).toContain("Optimize node can iterate up to 5 times based on feedback");
+    expect(report.schemaWarnings).toContain(
+      "Optimize node can iterate up to 5 times based on feedback",
+    );
   });
 
   it("formats analysis as readable text", () => {
-    const s = step("summarize").prompt("Summarize").output(z.object({ summary: z.string() })).retry({ maxAttempts: 3 });
+    const s = step("summarize")
+      .prompt("Summarize")
+      .output(z.object({ summary: z.string() }))
+      .retry({ maxAttempts: 3 });
     const p = pipeline("format-test").step(s);
 
     const text = formatAnalysis(analyze(p));

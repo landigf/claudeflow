@@ -1,0 +1,29 @@
+name: hackathon-braynr-learning-pack
+steps:
+  - id: repo-scan
+    prompt: |
+      Read the current repository and summarize what product or capability already exists.
+      Theme: Braynr EdTech & Learning
+      Constraints: {constraints}
+    tools: [Read, Glob, Grep]
+    retry: { maxAttempts: 2 }
+    output:
+      repo_summary: string
+
+  - id: idea-pack
+    prompt: |
+      Using this repo summary: {repo-scan.repo_summary}
+      Generate 5 concrete ideas for the Braynr EdTech & Learning track.
+      Each idea must include target user, pain point, why it is better than a generic tutor, and how to demo it fast.
+    retry: { maxAttempts: 2 }
+    output:
+      report: string
+
+  - id: demo-plan
+    prompt: |
+      From this idea pack: {idea-pack.report}
+      Choose the best single concept and produce a 24-hour demo plan.
+      Include sponsor/tool fit, MVP scope cuts, and the one metric or proof point to show judges.
+    retry: { maxAttempts: 2 }
+    output:
+      plan: string

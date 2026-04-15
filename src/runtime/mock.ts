@@ -48,7 +48,9 @@ export class MockRuntime implements Runtime {
   }
 
   /** Create a MockRuntime from recorded snapshot fixtures */
-  static fromSnapshot(fixtures: Record<string, { response: string; structured?: unknown }>): MockRuntime {
+  static fromSnapshot(
+    fixtures: Record<string, { response: string; structured?: unknown }>,
+  ): MockRuntime {
     const responses: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(fixtures)) {
       responses[key] = value.structured ?? value.response;

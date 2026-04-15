@@ -1,0 +1,10 @@
+name: hackathon-tasks-from-spec
+steps:
+  - id: task-breakdown
+    prompt: |
+      Turn this specification into an actionable task list:
+      {specification}
+
+      Split work into ideation, product/UX, implementation, validation, and demo preparation.
+    output:
+      tasks: string

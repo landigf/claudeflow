@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
-  step, pipeline, z, MockRuntime,
-  agent, assign, createCrew,
+  DspyTool,
+  MockRuntime,
+  PromptfooTool,
+  agent,
+  assign,
+  createCrew,
+  pipeline,
+  step,
   traceToOtlp,
-  PromptfooTool, DspyTool,
+  z,
 } from "../../src/index.js";
 
 describe("multi-agent coordination", () => {
@@ -45,7 +51,12 @@ describe("multi-agent coordination", () => {
     const fixer = agent("fixer", { role: "Developer", goal: "Fix security issues" });
 
     const crew = createCrew([
-      { agent: analyst, step: step("scan").prompt("Scan for vulnerabilities").output(z.object({ issues: z.array(z.string()) })) },
+      {
+        agent: analyst,
+        step: step("scan")
+          .prompt("Scan for vulnerabilities")
+          .output(z.object({ issues: z.array(z.string()) })),
+      },
       { agent: fixer, step: step("fix").prompt("Fix: {analyst:scan.issues}") },
     ]);
 
@@ -62,7 +73,11 @@ describe("multi-agent coordination", () => {
   });
 
   it("preserves model preference from agent role", () => {
-    const cheapAgent = agent("cheap", { role: "Helper", goal: "Quick tasks", model: "claude-haiku-4-5" });
+    const cheapAgent = agent("cheap", {
+      role: "Helper",
+      goal: "Quick tasks",
+      model: "claude-haiku-4-5",
+    });
     const assigned = assign(cheapAgent, step("task").prompt("do something"));
 
     expect(assigned.model).toBe("claude-haiku-4-5");
@@ -118,12 +133,12 @@ describe("PromptfooTool", () => {
 describe("DspyTool", () => {
   it("returns optimization config", async () => {
     const tool = new DspyTool();
-    const result = await tool.execute("optimize", {
+    const result = (await tool.execute("optimize", {
       prompt: "Summarize: {text}",
       evalCommand: "python eval.py",
       metricPattern: "accuracy: (\\d+\\.\\d+)",
       iterations: 5,
-    }) as Record<string, unknown>;
+    })) as Record<string, unknown>;
 
     expect(result.type).toBe("optimization_config");
     expect(result.strategy).toBe("iterative_refinement");
@@ -132,10 +147,10 @@ describe("DspyTool", () => {
 
   it("returns bootstrap config", async () => {
     const tool = new DspyTool();
-    const result = await tool.execute("bootstrap", {
+    const result = (await tool.execute("bootstrap", {
       prompt: "Classify: {text}",
       examples: [{ input: "hello", expectedOutput: "greeting" }],
-    }) as Record<string, unknown>;
+    })) as Record<string, unknown>;
 
     expect(result.type).toBe("bootstrap_config");
     expect(result.exampleCount).toBe(1);

@@ -1,14 +1,14 @@
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
-import { step } from "../core/step.js";
-import { PipelineDef } from "../core/pipeline.js";
-import { loop } from "../control/loop.js";
 import { branch } from "../control/branch.js";
+import { loop } from "../control/loop.js";
 import { map } from "../control/map.js";
 import { optimize } from "../control/optimize.js";
-import type { StepDef, RetryConfig } from "../core/step.js";
 import type { Context } from "../core/context.js";
+import { PipelineDef } from "../core/pipeline.js";
+import { step } from "../core/step.js";
+import type { RetryConfig, StepDef } from "../core/step.js";
 
 // ── YAML Schema ─────────────────────────────────────────────────────────────
 
@@ -80,7 +80,8 @@ export function loadYaml(filePath: string): PipelineDef {
 export function parseYamlString(yamlContent: string): PipelineDef {
   const doc = parseYaml(yamlContent) as YamlPipeline;
   if (!doc.name) throw new Error("YAML pipeline must have a 'name' field");
-  if (!doc.steps || !Array.isArray(doc.steps)) throw new Error("YAML pipeline must have a 'steps' array");
+  if (!doc.steps || !Array.isArray(doc.steps))
+    throw new Error("YAML pipeline must have a 'steps' array");
 
   let pipeline = new PipelineDef(doc.name);
 
@@ -224,10 +225,14 @@ function fieldToZod(field: YamlSchemaField): z.ZodType {
 
 function primitiveToZod(type: string): z.ZodType {
   switch (type) {
-    case "string": return z.string();
-    case "number": return z.number();
-    case "boolean": return z.boolean();
-    default: return z.unknown();
+    case "string":
+      return z.string();
+    case "number":
+      return z.number();
+    case "boolean":
+      return z.boolean();
+    default:
+      return z.unknown();
   }
 }
 
@@ -241,7 +246,10 @@ function buildCondition(expr: string): (ctx: Context) => boolean {
   if (!match) {
     // Fallback: treat as a truthy check on a path
     return (ctx) => {
-      const val = resolvePath(expr.trim(), { ...ctx.input as Record<string, unknown>, ...ctx.state });
+      const val = resolvePath(expr.trim(), {
+        ...(ctx.input as Record<string, unknown>),
+        ...ctx.state,
+      });
       return Boolean(val);
     };
   }
@@ -253,13 +261,20 @@ function buildCondition(expr: string): (ctx: Context) => boolean {
     const allVars = { ...(ctx.input as Record<string, unknown>), ...ctx.state };
     const actual = resolvePath(path, allVars);
     switch (op) {
-      case ">": return Number(actual) > Number(value);
-      case "<": return Number(actual) < Number(value);
-      case ">=": return Number(actual) >= Number(value);
-      case "<=": return Number(actual) <= Number(value);
-      case "==": return actual === value;
-      case "!=": return actual !== value;
-      default: return false;
+      case ">":
+        return Number(actual) > Number(value);
+      case "<":
+        return Number(actual) < Number(value);
+      case ">=":
+        return Number(actual) >= Number(value);
+      case "<=":
+        return Number(actual) <= Number(value);
+      case "==":
+        return actual === value;
+      case "!=":
+        return actual !== value;
+      default:
+        return false;
     }
   };
 }

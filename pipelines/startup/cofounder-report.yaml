@@ -1,0 +1,9 @@
+name: startup-cofounder-report
+steps:
+  - id: cofounder-report
+    prompt: |
+      Produce a cofounder-style memo grounded in the current codebase.
+      Cover what is working, what is fragile, what to improve next, and where product leverage is highest.
+    tools: [Read, Glob, Grep]
+    output:
+      memo: string

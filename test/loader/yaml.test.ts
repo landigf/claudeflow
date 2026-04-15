@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
 import path from "node:path";
-import { loadYaml, parseYamlString, MockRuntime } from "../../src/index.js";
+import { describe, expect, it } from "vitest";
+import { MockRuntime, loadYaml, parseYamlString } from "../../src/index.js";
 
 describe("YAML loader", () => {
   it("loads a pipeline from a YAML file", () => {
@@ -31,6 +31,20 @@ describe("YAML loader", () => {
     const classifyNode = p.nodes[1];
     if (classifyNode.type !== "step") throw new Error("expected step");
     expect(classifyNode.step.retry?.maxAttempts).toBe(2);
+  });
+
+  it("parses step timeout config", () => {
+    const yaml = `
+name: timeout-test
+steps:
+  - id: review
+    prompt: "review {code}"
+    timeout: 120000
+`;
+    const p = parseYamlString(yaml);
+    const reviewNode = p.nodes[0];
+    if (reviewNode.type !== "step") throw new Error("expected step");
+    expect(reviewNode.step.timeoutMs).toBe(120000);
   });
 
   it("parses YAML string directly", () => {

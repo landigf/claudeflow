@@ -1,5 +1,5 @@
-import type { StepDef } from "../core/step.js";
 import type { Context } from "../core/context.js";
+import type { StepDef } from "../core/step.js";
 import { resolveStep } from "./resolve.js";
 
 export interface BranchDef {

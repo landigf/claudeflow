@@ -1,0 +1,23 @@
+name: startup-security-perf-crew
+steps:
+  - id: security-review
+    prompt: |
+      Review the repository for security risks and suspicious patterns.
+    tools: [Read, Glob, Grep]
+    output:
+      security_findings: string
+
+  - id: perf-review
+    prompt: |
+      Review the repository for performance risks, obvious inefficiencies, and scaling bottlenecks.
+    tools: [Read, Glob, Grep]
+    output:
+      perf_findings: string
+
+  - id: synthesis
+    prompt: |
+      Combine these reviews into one prioritized report.
+      Security: {security-review.security_findings}
+      Performance: {perf-review.perf_findings}
+    output:
+      report: string

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { step, pipeline, z, MockRuntime, validate, benchmark } from "../../src/index.js";
+import { MockRuntime, benchmark, pipeline, step, validate, z } from "../../src/index.js";
 
 describe("validate", () => {
   it("passes for a well-formed pipeline", () => {
-    const s1 = step("fetch").prompt("fetch {url}").output(z.object({ data: z.string() }));
-    const s2 = step("process").prompt("process {fetch.data}").output(z.object({ result: z.string() }));
+    const s1 = step("fetch")
+      .prompt("fetch {url}")
+      .output(z.object({ data: z.string() }));
+    const s2 = step("process")
+      .prompt("process {fetch.data}")
+      .output(z.object({ result: z.string() }));
     const p = pipeline("valid").step(s1).step(s2);
 
     const errors = validate(p);
@@ -25,7 +29,9 @@ describe("validate", () => {
     const p = pipeline("empty-step").step(s.build());
 
     const errors = validate(p);
-    expect(errors.some((e) => e.severity === "error" && e.message.includes("no prompt and no function"))).toBe(true);
+    expect(
+      errors.some((e) => e.severity === "error" && e.message.includes("no prompt and no function")),
+    ).toBe(true);
   });
 
   it("warns about referencing a step that hasn't run", () => {
@@ -74,7 +80,13 @@ describe("benchmark", () => {
       async execute() {
         callCount++;
         if (callCount % 2 === 0) throw new Error("fail");
-        return { text: "ok", usage: { inputTokens: 1, outputTokens: 1 }, costUsd: 0, durationMs: 1, model: "m" };
+        return {
+          text: "ok",
+          usage: { inputTokens: 1, outputTokens: 1 },
+          costUsd: 0,
+          durationMs: 1,
+          model: "m",
+        };
       },
     };
 

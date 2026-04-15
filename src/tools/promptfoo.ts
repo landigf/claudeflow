@@ -46,8 +46,16 @@ export class PromptfooTool implements ToolAdapter {
     const configB = params.configB as string;
     const timeout = (params.timeout as number) ?? 300_000;
 
-    const resultA = await this.#spawn("promptfoo", ["eval", "--config", configA, "--output-format", "json"], timeout);
-    const resultB = await this.#spawn("promptfoo", ["eval", "--config", configB, "--output-format", "json"], timeout);
+    const resultA = await this.#spawn(
+      "promptfoo",
+      ["eval", "--config", configA, "--output-format", "json"],
+      timeout,
+    );
+    const resultB = await this.#spawn(
+      "promptfoo",
+      ["eval", "--config", configB, "--output-format", "json"],
+      timeout,
+    );
 
     return {
       configA: { config: configA, result: resultA },
@@ -55,7 +63,11 @@ export class PromptfooTool implements ToolAdapter {
     };
   }
 
-  #spawn(command: string, args: string[], timeout: number): Promise<{ stdout: string; stderr: string; exitCode: number; success: boolean }> {
+  #spawn(
+    command: string,
+    args: string[],
+    timeout: number,
+  ): Promise<{ stdout: string; stderr: string; exitCode: number; success: boolean }> {
     return new Promise((resolve) => {
       let hasCommand = true;
       const child = spawn(command, args, {
@@ -69,11 +81,15 @@ export class PromptfooTool implements ToolAdapter {
 
       const timer = setTimeout(() => {
         child.kill("SIGTERM");
-        resolve({ stdout, stderr: stderr + "\n(timed out)", exitCode: -1, success: false });
+        resolve({ stdout, stderr: `${stderr}\n(timed out)`, exitCode: -1, success: false });
       }, timeout);
 
-      child.stdout.on("data", (c: Buffer) => { stdout += c.toString(); });
-      child.stderr.on("data", (c: Buffer) => { stderr += c.toString(); });
+      child.stdout.on("data", (c: Buffer) => {
+        stdout += c.toString();
+      });
+      child.stderr.on("data", (c: Buffer) => {
+        stderr += c.toString();
+      });
 
       child.on("error", (err) => {
         clearTimeout(timer);
@@ -89,7 +105,12 @@ export class PromptfooTool implements ToolAdapter {
       child.on("close", (code) => {
         clearTimeout(timer);
         if (hasCommand) {
-          resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code ?? -1, success: code === 0 });
+          resolve({
+            stdout: stdout.trim(),
+            stderr: stderr.trim(),
+            exitCode: code ?? -1,
+            success: code === 0,
+          });
         }
       });
     });

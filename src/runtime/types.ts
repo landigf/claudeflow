@@ -2,7 +2,7 @@ import type { ZodType } from "zod";
 
 /**
  * Runtime is the abstraction over how LLM calls are executed.
- * Implementations: ClaudeCliRuntime (local), ClaudeApiRuntime (production), MockRuntime (testing).
+ * Implementations: ClaudeCliRuntime, ClaudeApiRuntime, OpenAICompatibleRuntime, MockRuntime.
  */
 export interface Runtime {
   execute(request: RuntimeRequest): Promise<RuntimeResponse>;

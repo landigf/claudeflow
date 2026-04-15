@@ -1,0 +1,9 @@
+name: startup-nightly-code-review
+steps:
+  - id: code-review
+    prompt: |
+      Review the current repository for bugs, regressions, missing tests, and maintainability risks.
+      Prioritize findings by severity and give concrete next actions.
+    tools: [Read, Glob, Grep]
+    output:
+      report: string

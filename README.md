@@ -2,7 +2,7 @@
 
 **Composable AI task pipelines — Zod for LLM workflows.**
 
-Define steps with typed schemas. Compose with loops, branches, maps. Inspect prompt footprint and risk before running. Get full execution traces. Same pipeline runs on Claude CLI (free) or API (production).
+Define steps with typed schemas. Compose with loops, branches, maps. Inspect prompt footprint and risk before running. Get full execution traces. Same pipeline runs on Claude CLI, Anthropic API, OpenAI-compatible APIs, or local Ollama models.
 
 ```
 npm install claudeflow
@@ -56,7 +56,7 @@ When you ask Claude to do a complex multi-step task, it fails. No persistent sta
 - **Analyzable** — inspect prompt footprint, pricing scenarios, and runtime risk before running
 - **Observable** — full trace with timing, tokens, cost per step
 - **Testable** — MockRuntime for zero-token development, validate() for static checks
-- **Portable** — same pipeline runs on CLI (free) or API (production)
+- **Portable** — same pipeline runs on Claude CLI, API keys, or local OpenAI-compatible servers
 - **Shareable** — YAML files checked into git, reviewed in PRs
 
 ## Core concepts
@@ -94,6 +94,36 @@ const result = await loadYaml("investigate-bug.yaml").run(
   { runtime: new ClaudeCliRuntime() }
 );
 ```
+
+## Team Kit
+
+ClaudeFlow can also scaffold a repo-native collaboration kit for teammates using Claude, Codex, and Copilot.
+
+```bash
+npx claudeflow init --preset hackathon --assistants claude,codex,copilot
+npx claudeflow doctor
+```
+
+Re-run `init` with another preset to add more scaffolded use cases. Presets merge into the Team Kit config, so you can enable both hackathon and startup assets in the same repo.
+
+What `init` adds:
+- `AGENTS.md` guidance for cross-assistant quality and lifecycle rules
+- `.github/copilot-instructions.md` for Copilot-aware repo behavior
+- `.claude/commands/` slash-command workflows for Claude Code
+- `doc/specs/<slug>/` lifecycle templates: brainstorm -> spec -> tasks -> implementation -> feedback
+- `explainit/` human-readable playbooks for hackathon and startup usage
+- `explainit/macbook-m3-pro.md` for Apple Silicon local-model guidance
+- `explainit/gdg-ai-hack-2026/` for the researched Milan hackathon challenge pack
+- starter pipelines in `pipelines/hackathon/` or `pipelines/startup/`
+
+The default teammate flow is:
+1. brainstorm in `01-brainstorm.md`
+2. turn it into `02-specification.md`
+3. break it into `03-tasks.md`
+4. write `04-implementation.md` as the handoff
+5. append findings to `05-feedback.md`
+
+`doctor` checks that the Team Kit assets exist, validates runtime profile defaults, and warns about missing env vars or tools like `claude` and `ollama`.
 
 ## Inspect before running
 
@@ -155,6 +185,84 @@ Rule of thumb:
 - use `checkpoint` for expensive pipelines
 - split the step if one prompt is doing too much
 
+## Runtime Choices
+
+Keep Claude Max as the default when you want Claude Code tools and subscription-based local runs:
+
+```typescript
+import { ClaudeCliRuntime } from "claudeflow";
+
+const runtime = new ClaudeCliRuntime({ permissionMode: "plan" });
+```
+
+Use API keys when you want predictable daily automation spend:
+
+```typescript
+import { ClaudeApiRuntime, OpenAICompatibleRuntime } from "claudeflow";
+
+const anthropic = new ClaudeApiRuntime({
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+  model: "claude-haiku-4-5-20251001",
+});
+
+const openai = new OpenAICompatibleRuntime({
+  apiKey: process.env.OPENAI_API_KEY!,
+  model: "gpt-5-mini",
+});
+
+const gemini = new OpenAICompatibleRuntime({
+  apiKey: process.env.GEMINI_API_KEY!,
+  baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+  model: "gemini-2.5-flash-lite",
+});
+
+const ollama = new OpenAICompatibleRuntime({
+  baseUrl: "http://127.0.0.1:11434/v1",
+  model: "auto",
+});
+```
+
+Or use the dedicated Ollama wrapper:
+
+```typescript
+import { OllamaRuntime } from "claudeflow";
+
+const runtime = new OllamaRuntime({
+  model: "auto",
+});
+```
+
+`OllamaRuntime({ model: "auto" })` routes locally by use case:
+- lightweight text work -> `qwen2.5-coder:3b`
+- coding/review work -> `qwen2.5-coder:7b`
+- vision-like prompts -> `gemma3:4b`
+
+The CLI can switch providers without changing pipeline files:
+
+```bash
+# Claude Max / Claude Code
+npx claudeflow run pipelines/daily.yaml --runtime claude-cli
+
+# Anthropic API
+ANTHROPIC_API_KEY=... npx claudeflow run pipelines/daily.yaml --runtime anthropic --model claude-haiku-4-5-20251001
+
+# OpenAI API
+OPENAI_API_KEY=... npx claudeflow run pipelines/daily.yaml --runtime openai --model gpt-5-mini
+
+# Gemini API via the official OpenAI-compatible endpoint
+GEMINI_API_KEY=... npx claudeflow run pipelines/daily.yaml --runtime gemini --model gemini-2.5-flash-lite
+
+# Local Ollama with automatic model selection
+npx claudeflow run pipelines/daily.yaml --runtime ollama
+```
+
+Practical default split:
+- cheapest recurring classification/extraction/rewrite steps: `gpt-5-nano`, `gpt-4o-mini`, or local Ollama
+- hackathon/sponsor-friendly cheap path: `gemini-2.5-flash-lite`
+- best cost/quality daily default: `gpt-5-mini` or `claude-haiku`
+- deeper synthesis / complex code audits: `gpt-5.4-mini`, Claude CLI / Sonnet / Opus
+- privacy-sensitive or near-zero marginal cost batch work: Ollama/local model
+
 ## Testing without tokens
 
 ```typescript
@@ -193,7 +301,7 @@ traces/self-audit-2026-04-12.json
 ```
 src/core/       → Step, Pipeline, Context, Schema
 src/control/    → Loop, Branch, Map + shared resolve helper
-src/runtime/    → ClaudeCliRuntime, ClaudeApiRuntime, MockRuntime
+src/runtime/    → ClaudeCliRuntime, ClaudeApiRuntime, OpenAICompatibleRuntime, MockRuntime
 src/analyzer/   → Static planning heuristics
 src/loader/     → YAML parser, prompt interpolation
 src/testing/    → validate(), benchmark()
@@ -210,3 +318,21 @@ src/testing/    → validate(), benchmark()
 ## License
 
 MIT
+
+<!-- claudeflow-teamkit-readme:start -->
+## ClaudeFlow Team Kit
+
+This repository is prepared to work with ClaudeFlow as a structured collaboration layer for humans plus assistants.
+
+Start here:
+1. Read `AGENTS.md`.
+2. Read `explainit/README.md` and the relevant use-case file.
+3. Use `doc/specs/<slug>/` for idea -> spec -> tasks -> implementation -> feedback.
+
+Recommended runtime path:
+- `cheap`: openai / gpt-5-mini
+- `deep`: claude-cli / claude-sonnet-4-20250514
+- `local`: ollama / auto
+
+Teammates should start with `cheap` unless the task clearly needs deeper reasoning or a private local run.
+<!-- claudeflow-teamkit-readme:end -->

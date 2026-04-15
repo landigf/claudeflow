@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import os from "node:os";
+import { zodToJsonSchema } from "./schema.js";
 import type { Runtime, RuntimeRequest, RuntimeResponse } from "./types.js";
 
 export interface ClaudeCliRuntimeOptions {
@@ -105,7 +106,8 @@ export class ClaudeCliRuntime implements Runtime {
     // This prevents Claude from confusing system instructions with user content.
     // Always include a safety guardrail so the response text is non-empty even in
     // plan mode / when the step has no explicit system prompt.
-    const DEFAULT_SAFETY = "Provide your complete response as plain text in the response body. Do not write files or create artifacts as a substitute for returning text. If tools are allowed you may inspect or modify files when that materially helps, but you must still return the final deliverable in your response.";
+    const DEFAULT_SAFETY =
+      "Provide your complete response as plain text in the response body. Do not write files or create artifacts as a substitute for returning text. If tools are allowed you may inspect or modify files when that materially helps, but you must still return the final deliverable in your response.";
     const systemPrompt = request.systemPrompt
       ? `${request.systemPrompt}\n\n${DEFAULT_SAFETY}`
       : DEFAULT_SAFETY;
@@ -135,8 +137,8 @@ export class ClaudeCliRuntime implements Runtime {
       return {
         text: raw.trim(),
         usage: {
-          inputTokens: inMatch ? parseInt(inMatch[1], 10) : 0,
-          outputTokens: outMatch ? parseInt(outMatch[1], 10) : 0,
+          inputTokens: inMatch ? Number.parseInt(inMatch[1], 10) : 0,
+          outputTokens: outMatch ? Number.parseInt(outMatch[1], 10) : 0,
         },
         costUsd: null,
         durationMs,
@@ -150,12 +152,14 @@ export class ClaudeCliRuntime implements Runtime {
 
     // Detect empty results — Claude sometimes writes to files instead of returning output
     if (!parsed.result || parsed.result.trim().length === 0) {
-      console.warn(`[claudeflow] WARNING: Claude returned empty result. This usually means it wrote to a file instead of returning text. Adding --system-prompt flag should prevent this.`);
+      console.warn(
+        "[claudeflow] WARNING: Claude returned empty result. This usually means it wrote to a file instead of returning text. Adding --system-prompt flag should prevent this.",
+      );
     }
 
     // Extract model name from model_usage keys
     const model = parsed.model_usage
-      ? Object.keys(parsed.model_usage)[0] ?? "unknown"
+      ? (Object.keys(parsed.model_usage)[0] ?? "unknown")
       : "unknown";
 
     // Try to parse structured output if schema was requested
@@ -229,50 +233,33 @@ export class ClaudeCliRuntime implements Runtime {
   }
 }
 
-/**
- * Minimal Zod → JSON Schema conversion for output schema instructions.
- * Only handles the common cases needed for prompt engineering.
- */
-function zodToJsonSchema(schema: unknown): Record<string, unknown> {
-  // Zod schemas have a _def property with shape info
-  const def = (schema as { _def?: { typeName?: string; shape?: () => Record<string, unknown> } })._def;
-  if (!def) return { type: "object" };
-
-  if (def.typeName === "ZodObject" && def.shape) {
-    const shape = def.shape();
-    const properties: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(shape)) {
-      properties[key] = zodToJsonSchema(value);
-    }
-    return { type: "object", properties };
-  }
-
-  if (def.typeName === "ZodString") return { type: "string" };
-  if (def.typeName === "ZodNumber") return { type: "number" };
-  if (def.typeName === "ZodBoolean") return { type: "boolean" };
-  if (def.typeName === "ZodArray") {
-    const items = (def as { type?: unknown }).type;
-    return { type: "array", items: items ? zodToJsonSchema(items) : {} };
-  }
-
-  return { type: "string" };
-}
-
 /** Extract the first balanced JSON object from a string. */
 function extractJsonObject(text: string): string | undefined {
   const start = text.indexOf("{");
   if (start === -1) return undefined;
   let depth = 0;
   let inString = false;
-  let escape = false;
+  let escaped = false;
   for (let i = start; i < text.length; i++) {
     const ch = text[i];
-    if (escape) { escape = false; continue; }
-    if (ch === "\\" && inString) { escape = true; continue; }
-    if (ch === '"') { inString = !inString; continue; }
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === "\\" && inString) {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
     if (inString) continue;
     if (ch === "{") depth++;
-    else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
   }
   return undefined;
 }

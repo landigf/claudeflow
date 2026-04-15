@@ -22,7 +22,14 @@ export class GitHubTool implements ToolAdapter {
       case "create-pr":
         return this.#createPr(params);
       case "list-repos":
-        return this.#ghJson(["repo", "list", "--json", "name,nameWithOwner,description", "--limit", "30"]);
+        return this.#ghJson([
+          "repo",
+          "list",
+          "--json",
+          "name,nameWithOwner,description",
+          "--limit",
+          "30",
+        ]);
       default:
         throw new Error(`GitHubTool: unknown action "${action}"`);
     }
@@ -31,7 +38,15 @@ export class GitHubTool implements ToolAdapter {
   async #getIssue(params: Record<string, unknown>): Promise<unknown> {
     const repo = params.repo as string;
     const number = params.number as number;
-    return this.#ghJson(["issue", "view", String(number), "--repo", repo, "--json", "title,body,labels,state,assignees"]);
+    return this.#ghJson([
+      "issue",
+      "view",
+      String(number),
+      "--repo",
+      repo,
+      "--json",
+      "title,body,labels,state,assignees",
+    ]);
   }
 
   async #createIssue(params: Record<string, unknown>): Promise<unknown> {
@@ -52,7 +67,18 @@ export class GitHubTool implements ToolAdapter {
   async #searchIssues(params: Record<string, unknown>): Promise<unknown> {
     const repo = params.repo as string;
     const query = params.query as string;
-    return this.#ghJson(["issue", "list", "--repo", repo, "--search", query, "--json", "number,title,state", "--limit", "10"]);
+    return this.#ghJson([
+      "issue",
+      "list",
+      "--repo",
+      repo,
+      "--search",
+      query,
+      "--json",
+      "number,title,state",
+      "--limit",
+      "10",
+    ]);
   }
 
   async #createPr(params: Record<string, unknown>): Promise<unknown> {

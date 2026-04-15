@@ -42,7 +42,8 @@ export function traceToOtlp(trace: PipelineTrace): OtlpExportRequest {
 
   const stepSpans: OtlpSpan[] = trace.steps.map((step) => {
     const stepSpanId = hexId(8);
-    const startNano = dateToNano(trace.startedAt) + BigInt(sumDurationBefore(trace.steps, step) * 1_000_000);
+    const startNano =
+      dateToNano(trace.startedAt) + BigInt(sumDurationBefore(trace.steps, step) * 1_000_000);
     const endNano = startNano + BigInt(step.durationMs * 1_000_000);
 
     const span: OtlpSpan = {
@@ -76,10 +77,7 @@ export function traceToOtlp(trace: PipelineTrace): OtlpExportRequest {
     resourceSpans: [
       {
         resource: {
-          attributes: [
-            attr("service.name", "claudeflow"),
-            attr("service.version", "0.1.0"),
-          ],
+          attributes: [attr("service.name", "claudeflow"), attr("service.version", "0.1.0")],
         },
         scopeSpans: [
           {

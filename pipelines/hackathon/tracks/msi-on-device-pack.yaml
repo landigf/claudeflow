@@ -1,0 +1,29 @@
+name: hackathon-msi-on-device-pack
+steps:
+  - id: repo-scan
+    prompt: |
+      Read the current repository and summarize what product or capability already exists.
+      Theme: MSI On-Device AI
+      Constraints: {constraints}
+    tools: [Read, Glob, Grep]
+    retry: { maxAttempts: 2 }
+    output:
+      repo_summary: string
+
+  - id: idea-pack
+    prompt: |
+      Using this repo summary: {repo-scan.repo_summary}
+      Generate 5 concrete ideas for the MSI On-Device AI track.
+      Each idea must include why local inference matters, what runs on-device, and how to keep the demo reliable on real hardware.
+    retry: { maxAttempts: 2 }
+    output:
+      report: string
+
+  - id: demo-plan
+    prompt: |
+      From this idea pack: {idea-pack.report}
+      Choose the best single concept and produce a 24-hour demo plan.
+      Include local model/runtime choice, sponsor/tool fit, privacy or latency advantage, and fallback scope cuts.
+    retry: { maxAttempts: 2 }
+    output:
+      plan: string

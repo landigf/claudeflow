@@ -1,0 +1,11 @@
+name: hackathon-critique-idea
+steps:
+  - id: critique
+    prompt: |
+      Critique this idea or draft spec:
+      {idea}
+
+      Score it for user value, technical feasibility, demo impact, and execution risk.
+      End with a recommendation and the top 3 improvements.
+    output:
+      scorecard: string

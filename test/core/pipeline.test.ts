@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { step, pipeline, z, MockRuntime, loop, branch, map } from "../../src/index.js";
+import { MockRuntime, branch, loop, map, pipeline, step, z } from "../../src/index.js";
 
 describe("pipeline — basic steps", () => {
   it("runs a two-step pipeline with context chaining", async () => {
@@ -107,6 +107,43 @@ describe("pipeline — retry and fallback", () => {
     expect(result.trace.status).toBe("failed");
     expect(result.trace.steps[0].status).toBe("failed");
   });
+
+  it("retries empty responses and keeps attempt usage", async () => {
+    let callCount = 0;
+    const flaky = step("empty")
+      .output(z.object({ ok: z.boolean() }))
+      .prompt("return json")
+      .retry({ maxAttempts: 2, backoff: "fixed", baseDelayMs: 1 });
+
+    const runtime = {
+      async execute() {
+        callCount++;
+        if (callCount === 1) {
+          return {
+            text: "   ",
+            usage: { inputTokens: 40, outputTokens: 0 },
+            costUsd: 0.02,
+            durationMs: 5,
+            model: "mock",
+          };
+        }
+        return {
+          text: JSON.stringify({ ok: true }),
+          usage: { inputTokens: 10, outputTokens: 5 },
+          costUsd: 0.001,
+          durationMs: 5,
+          model: "mock",
+        };
+      },
+    };
+
+    const result = await pipeline("empty-retry").step(flaky).run({}, { runtime });
+
+    expect(result.trace.status).toBe("completed");
+    expect(result.trace.steps[0].attempts).toHaveLength(2);
+    expect(result.trace.steps[0].attempts[0].usage.inputTokens).toBe(40);
+    expect(callCount).toBe(2);
+  });
 });
 
 describe("pipeline — loop", () => {
@@ -150,7 +187,13 @@ describe("pipeline — loop", () => {
     const runtime = {
       async execute() {
         calls++;
-        return { text: "ok", usage: { inputTokens: 1, outputTokens: 1 }, costUsd: 0, durationMs: 1, model: "m" };
+        return {
+          text: "ok",
+          usage: { inputTokens: 1, outputTokens: 1 },
+          costUsd: 0,
+          durationMs: 1,
+          model: "m",
+        };
       },
     };
 
@@ -169,7 +212,7 @@ describe("pipeline — branch", () => {
     const review = step("review").prompt("review");
 
     const branchDef = branch(
-      (ctx) => ((ctx.state.setup as { confidence: number }).confidence > 0.8),
+      (ctx) => (ctx.state.setup as { confidence: number }).confidence > 0.8,
       { true: publish, false: review },
     );
 
@@ -179,7 +222,10 @@ describe("pipeline — branch", () => {
       review: "reviewed",
     });
 
-    const result = await pipeline("branch-test").step(setup).branch(branchDef).run({}, { runtime: mock });
+    const result = await pipeline("branch-test")
+      .step(setup)
+      .branch(branchDef)
+      .run({}, { runtime: mock });
 
     expect(result.trace.steps).toHaveLength(2);
     expect(result.trace.steps[1].stepId).toBe("publish");
@@ -193,7 +239,7 @@ describe("pipeline — branch", () => {
     const review = step("review").prompt("review");
 
     const branchDef = branch(
-      (ctx) => ((ctx.state.setup as { confidence: number }).confidence > 0.8),
+      (ctx) => (ctx.state.setup as { confidence: number }).confidence > 0.8,
       { true: publish, false: review },
     );
 
@@ -203,7 +249,10 @@ describe("pipeline — branch", () => {
       review: "reviewed",
     });
 
-    const result = await pipeline("branch-false").step(setup).branch(branchDef).run({}, { runtime: mock });
+    const result = await pipeline("branch-false")
+      .step(setup)
+      .branch(branchDef)
+      .run({}, { runtime: mock });
 
     expect(result.trace.steps[1].stepId).toBe("review");
   });
@@ -215,8 +264,7 @@ describe("pipeline — map", () => {
       .output(z.object({ items: z.array(z.object({ name: z.string() })) }))
       .prompt("produce items");
 
-    const process = step("process")
-      .prompt("process {item.name}");
+    const process = step("process").prompt("process {item.name}");
 
     const mapDef = map("produce.items", process);
 
@@ -248,6 +296,15 @@ describe("pipeline — model selection", () => {
 
     expect(mock.calls[0].model).toBe("claude-haiku-4-5");
     expect(mock.calls[1].model).toBe("claude-opus-4-6");
+  });
+
+  it("passes per-step timeout to runtime", async () => {
+    const timed = step("timed").prompt("slow task").timeout(2_500);
+    const mock = new MockRuntime({ timed: "ok" });
+
+    await pipeline("timeout").step(timed).run({}, { runtime: mock });
+
+    expect(mock.calls[0].timeoutMs).toBe(2_500);
   });
 
   it("uses no model override when not specified", async () => {

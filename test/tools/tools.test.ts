@@ -1,20 +1,32 @@
-import { describe, expect, it } from "vitest";
-import { step, pipeline, z, MockRuntime, ShellTool, FileTool, EvalTool, optimize } from "../../src/index.js";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  EvalTool,
+  FileTool,
+  MockRuntime,
+  ShellTool,
+  optimize,
+  pipeline,
+  step,
+  z,
+} from "../../src/index.js";
 
 describe("ShellTool", () => {
   it("runs a command and captures output", async () => {
     const shell = new ShellTool();
-    const result = await shell.execute("run", { command: "echo hello" }) as { stdout: string; exitCode: number };
+    const result = (await shell.execute("run", { command: "echo hello" })) as {
+      stdout: string;
+      exitCode: number;
+    };
     expect(result.stdout).toBe("hello");
     expect(result.exitCode).toBe(0);
   });
 
   it("captures exit code on failure", async () => {
     const shell = new ShellTool();
-    const result = await shell.execute("run", { command: "exit 42" }) as { exitCode: number };
+    const result = (await shell.execute("run", { command: "exit 42" })) as { exitCode: number };
     expect(result.exitCode).toBe(42);
   });
 
@@ -30,13 +42,17 @@ describe("FileTool", () => {
     const file = new FileTool();
 
     await file.execute("write", { path: path.join(dir, "test.txt"), content: "hello world" });
-    const result = await file.execute("read", { path: path.join(dir, "test.txt") }) as { content: string };
+    const result = (await file.execute("read", { path: path.join(dir, "test.txt") })) as {
+      content: string;
+    };
     expect(result.content).toBe("hello world");
   });
 
   it("checks file existence", async () => {
     const file = new FileTool();
-    const result = await file.execute("exists", { path: "/tmp/nonexistent-cf-test" }) as { exists: boolean };
+    const result = (await file.execute("exists", { path: "/tmp/nonexistent-cf-test" })) as {
+      exists: boolean;
+    };
     expect(result.exists).toBe(false);
   });
 });
@@ -44,20 +60,20 @@ describe("FileTool", () => {
 describe("EvalTool", () => {
   it("runs a command and extracts a metric", async () => {
     const eval_ = new EvalTool();
-    const result = await eval_.execute("run", {
+    const result = (await eval_.execute("run", {
       command: 'echo "accuracy: 0.847"',
       extractMetric: "accuracy: (\\d+\\.\\d+)",
-    }) as { metric: number; success: boolean };
+    })) as { metric: number; success: boolean };
     expect(result.metric).toBe(0.847);
     expect(result.success).toBe(true);
   });
 
   it("returns null metric when no match", async () => {
     const eval_ = new EvalTool();
-    const result = await eval_.execute("run", {
+    const result = (await eval_.execute("run", {
       command: "echo no metrics here",
       extractMetric: "score: (\\d+)",
-    }) as { metric: number | null };
+    })) as { metric: number | null };
     expect(result.metric).toBeNull();
   });
 });
@@ -67,8 +83,12 @@ describe("pipeline with tool nodes", () => {
     const tools = new Map();
     tools.set("shell", new ShellTool());
 
-    const p = pipeline("tool-test")
-      .tool({ id: "run-echo", adapter: "shell", action: "run", params: { command: "echo pipeline-tool-works" } });
+    const p = pipeline("tool-test").tool({
+      id: "run-echo",
+      adapter: "shell",
+      action: "run",
+      params: { command: "echo pipeline-tool-works" },
+    });
 
     const mock = new MockRuntime({});
     const result = await p.run({}, { runtime: mock, tools });
@@ -84,10 +104,17 @@ describe("pipeline with tool nodes", () => {
     const tools = new Map();
     tools.set("shell", new ShellTool());
 
-    const s = step("produce").output(z.object({ name: z.string() })).prompt("produce");
+    const s = step("produce")
+      .output(z.object({ name: z.string() }))
+      .prompt("produce");
     const p = pipeline("interp-tool")
       .step(s)
-      .tool({ id: "greet", adapter: "shell", action: "run", params: { command: "echo hello {produce.name}" } });
+      .tool({
+        id: "greet",
+        adapter: "shell",
+        action: "run",
+        params: { command: "echo hello {produce.name}" },
+      });
 
     const mock = new MockRuntime({ produce: { name: "world" } });
     const result = await p.run({}, { runtime: mock, tools });
@@ -117,7 +144,7 @@ describe("optimize loop", () => {
     const result = await p.run({}, { runtime: mock });
 
     expect(result.trace.status).toBe("completed");
-    const optResults = (result.output as Record<string, unknown>);
+    const optResults = result.output as Record<string, unknown>;
     // baseline eats iteration 1 (score=65), then 3 iterations: 80, 95, 110
     expect(optResults.bestMetric).toBe(110);
     expect(optResults.totalIterations).toBe(3);
@@ -143,7 +170,11 @@ describe("optimize loop", () => {
     const mock = new MockRuntime({ tweak: "tweaked" });
     const result = await p.run({}, { runtime: mock });
 
-    const optResults = result.output as { bestMetric: number; keptCount: number; attempts: Array<{ kept: boolean }> };
+    const optResults = result.output as {
+      bestMetric: number;
+      keptCount: number;
+      attempts: Array<{ kept: boolean }>;
+    };
     // baseline eats iteration 1 (score=60), then 4 iterations with scores: 70, 50, 80, (out of range)
     // Actually: fn is called for baseline(=60) then iter1(=70>60 keep), iter2(=50<70 discard), iter3(=80>70 keep), iter4(out of scores array, =0<80 discard)
     // But we only have 4 scores total and baseline takes one, so 3 loop iterations

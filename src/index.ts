@@ -11,7 +11,14 @@ export { optimize } from "./control/optimize.js";
 export { agent, assign, createCrew } from "./control/agents.js";
 
 // Tools
-export { ShellTool, GitHubTool, FileTool, EvalTool, PromptfooTool, DspyTool } from "./tools/index.js";
+export {
+  ShellTool,
+  GitHubTool,
+  FileTool,
+  EvalTool,
+  PromptfooTool,
+  DspyTool,
+} from "./tools/index.js";
 export type { ToolAdapter } from "./tools/index.js";
 
 // Observability
@@ -27,6 +34,9 @@ export { analyze, formatAnalysis } from "./analyzer/index.js";
 export { MockRuntime } from "./runtime/mock.js";
 export { ClaudeCliRuntime } from "./runtime/cli.js";
 export { ClaudeApiRuntime } from "./runtime/api.js";
+export { OpenAICompatibleRuntime } from "./runtime/openai.js";
+export { OllamaRuntime, selectOllamaModel } from "./runtime/ollama.js";
+export { createRuntime } from "./runtime/factory.js";
 
 // Memory & Checkpointing
 export { MemoryStore } from "./memory/store.js";
@@ -37,6 +47,15 @@ export type { Checkpoint } from "./memory/checkpoint.js";
 export { validate } from "./testing/validate.js";
 export { benchmark } from "./testing/benchmark.js";
 
+// Team Kit
+export {
+  doctorTeamKit,
+  formatDoctorReport,
+  initTeamKit,
+  parseAssistantList,
+  parseTeamKitPreset,
+} from "./teamkit/index.js";
+
 // Types
 export type { StepDef, RetryConfig, StepBuilder } from "./core/step.js";
 export type { PipelineDef, PipelineRunOptions, PipelineResult } from "./core/pipeline.js";
@@ -46,6 +65,9 @@ export type { PipelineTrace, StepTrace, AttemptTrace } from "./observability/tra
 export type { PipelineAnalysis } from "./analyzer/index.js";
 export type { ClaudeCliRuntimeOptions } from "./runtime/cli.js";
 export type { ClaudeApiRuntimeOptions } from "./runtime/api.js";
+export type { OpenAICompatibleRuntimeOptions } from "./runtime/openai.js";
+export type { OllamaRuntimeOptions } from "./runtime/ollama.js";
+export type { RuntimeProvider, RuntimeFactoryOptions } from "./runtime/factory.js";
 export type { LoopDef, LoopConfig } from "./control/loop.js";
 export type { BranchDef } from "./control/branch.js";
 export type { MapDef, MapConfig } from "./control/map.js";
@@ -54,3 +76,13 @@ export type { AgentRole } from "./control/agents.js";
 export type { ToolNode } from "./core/pipeline.js";
 export type { ValidationError } from "./testing/validate.js";
 export type { BenchmarkResult, BenchmarkOptions } from "./testing/benchmark.js";
+export type {
+  AssistantSurface,
+  InitTeamKitOptions,
+  InitTeamKitResult,
+  TeamKitConfig,
+  TeamKitDoctorIssue,
+  TeamKitDoctorOptions,
+  TeamKitDoctorReport,
+  TeamKitPreset,
+} from "./teamkit/index.js";

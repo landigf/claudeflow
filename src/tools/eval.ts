@@ -22,35 +22,41 @@ export class EvalTool implements ToolAdapter {
 
     const startMs = Date.now();
 
-    const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>((resolve) => {
-      const shell = process.platform === "darwin" ? "/bin/zsh" : "/bin/bash";
-      const child = spawn(shell, ["-c", command], {
-        cwd,
-        env: { ...process.env },
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+    const result = await new Promise<{ stdout: string; stderr: string; exitCode: number }>(
+      (resolve) => {
+        const shell = process.platform === "darwin" ? "/bin/zsh" : "/bin/bash";
+        const child = spawn(shell, ["-c", command], {
+          cwd,
+          env: { ...process.env },
+          stdio: ["ignore", "pipe", "pipe"],
+        });
 
-      let stdout = "";
-      let stderr = "";
+        let stdout = "";
+        let stderr = "";
 
-      const timer = setTimeout(() => {
-        child.kill("SIGTERM");
-        resolve({ stdout, stderr: stderr + "\n(timed out)", exitCode: -1 });
-      }, timeout);
+        const timer = setTimeout(() => {
+          child.kill("SIGTERM");
+          resolve({ stdout, stderr: `${stderr}\n(timed out)`, exitCode: -1 });
+        }, timeout);
 
-      child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-      child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+        child.stdout.on("data", (chunk: Buffer) => {
+          stdout += chunk.toString();
+        });
+        child.stderr.on("data", (chunk: Buffer) => {
+          stderr += chunk.toString();
+        });
 
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        resolve({ stdout, stderr, exitCode: code ?? -1 });
-      });
+        child.on("close", (code) => {
+          clearTimeout(timer);
+          resolve({ stdout, stderr, exitCode: code ?? -1 });
+        });
 
-      child.on("error", (err) => {
-        clearTimeout(timer);
-        resolve({ stdout: "", stderr: err.message, exitCode: -1 });
-      });
-    });
+        child.on("error", (err) => {
+          clearTimeout(timer);
+          resolve({ stdout: "", stderr: err.message, exitCode: -1 });
+        });
+      },
+    );
 
     const durationMs = Date.now() - startMs;
 

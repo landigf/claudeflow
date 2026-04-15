@@ -35,12 +35,21 @@ export class ShellTool implements ToolAdapter {
         resolve({ stdout, stderr, exitCode: -1, timedOut: true });
       }, timeout);
 
-      child.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
-      child.stderr.on("data", (chunk: Buffer) => { stderr += chunk.toString(); });
+      child.stdout.on("data", (chunk: Buffer) => {
+        stdout += chunk.toString();
+      });
+      child.stderr.on("data", (chunk: Buffer) => {
+        stderr += chunk.toString();
+      });
 
       child.on("close", (code) => {
         clearTimeout(timer);
-        resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code ?? -1, timedOut: false });
+        resolve({
+          stdout: stdout.trim(),
+          stderr: stderr.trim(),
+          exitCode: code ?? -1,
+          timedOut: false,
+        });
       });
 
       child.on("error", (err) => {

@@ -1,8 +1,8 @@
-import { describe, expect, it, beforeEach } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { step, pipeline, z, MockRuntime, MemoryStore, CheckpointManager } from "../../src/index.js";
+import { beforeEach, describe, expect, it } from "vitest";
+import { CheckpointManager, MemoryStore, MockRuntime, pipeline, step, z } from "../../src/index.js";
 
 describe("MemoryStore", () => {
   let dir: string;
@@ -73,8 +73,11 @@ describe("CheckpointManager", () => {
 
     const loaded = cm.load("test");
     expect(loaded).toBeDefined();
-    expect(loaded!.completedStepIndex).toBe(2);
-    expect(loaded!.contextState).toEqual({ step1: "done", step2: "done" });
+    if (!loaded) {
+      throw new Error("Expected checkpoint to be loaded");
+    }
+    expect(loaded.completedStepIndex).toBe(2);
+    expect(loaded.contextState).toEqual({ step1: "done", step2: "done" });
   });
 
   it("returns undefined when no checkpoint exists", () => {
@@ -122,7 +125,9 @@ describe("pipeline with checkpointing", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "cf-cp-"));
     const checkpoint = new CheckpointManager(dir);
 
-    const s1 = step("step1").output(z.object({ v: z.string() })).prompt("first");
+    const s1 = step("step1")
+      .output(z.object({ v: z.string() }))
+      .prompt("first");
     const s2 = step("step2").prompt("second using {step1.v}");
     const p = pipeline("resume-test").step(s1).step(s2);
 
@@ -132,7 +137,13 @@ describe("pipeline with checkpointing", () => {
       async execute() {
         callCount++;
         if (callCount === 1) {
-          return { text: JSON.stringify({ v: "hello" }), usage: { inputTokens: 1, outputTokens: 1 }, costUsd: 0, durationMs: 1, model: "m" };
+          return {
+            text: JSON.stringify({ v: "hello" }),
+            usage: { inputTokens: 1, outputTokens: 1 },
+            costUsd: 0,
+            durationMs: 1,
+            model: "m",
+          };
         }
         throw new Error("step2 crashed");
       },

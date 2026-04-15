@@ -1,0 +1,12 @@
+name: hackathon-handoff-summary
+steps:
+  - id: handoff
+    prompt: |
+      Create an implementation handoff from this feature lifecycle content:
+      Brainstorm: {brainstorm}
+      Specification: {specification}
+      Tasks: {tasks}
+
+      Summarize the likely code areas, testing plan, and demo plan.
+    output:
+      handoff: string

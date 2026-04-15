@@ -1,14 +1,14 @@
 import { nanoid } from "nanoid";
-import type { Runtime, RuntimeResponse } from "../runtime/types.js";
-import type { AttemptTrace, PipelineTrace, StepTrace } from "../observability/trace.js";
-import { createContext, advanceContext, type Context } from "./context.js";
-import { interpolate } from "../loader/interpolation.js";
-import type { StepDef } from "./step.js";
-import type { LoopDef } from "../control/loop.js";
 import type { BranchDef } from "../control/branch.js";
+import type { LoopDef } from "../control/loop.js";
 import type { MapDef } from "../control/map.js";
 import type { OptimizeDef } from "../control/optimize.js";
+import { interpolate } from "../loader/interpolation.js";
+import type { AttemptTrace, PipelineTrace, StepTrace } from "../observability/trace.js";
+import type { Runtime, RuntimeResponse } from "../runtime/types.js";
 import type { ToolAdapter } from "../tools/index.js";
+import { type Context, advanceContext, createContext } from "./context.js";
+import type { StepDef } from "./step.js";
 
 class PartialMapError extends Error {
   constructor(
@@ -114,7 +114,9 @@ export class PipelineDef {
         }
         stepTraces.push(...existing.completedTraces);
         if (options.verbose) {
-          console.log(`[claudeflow] Resuming from step ${startIndex + 1}/${this.nodes.length} (checkpoint: ${runId.slice(0, 8)})`);
+          console.log(
+            `[claudeflow] Resuming from step ${startIndex + 1}/${this.nodes.length} (checkpoint: ${runId.slice(0, 8)})`,
+          );
         }
       }
     }
@@ -130,8 +132,9 @@ export class PipelineDef {
     if (options.verbose && startIndex === 0) {
       console.log(`[claudeflow] ${this.name}`);
       console.log(`[claudeflow] Runtime: ${options.runtime.constructor.name}`);
-      if (options.memory) console.log(`[claudeflow] Memory: ${options.memory.keys().length} entries loaded`);
-      if (options.checkpoint) console.log(`[claudeflow] Checkpointing enabled`);
+      if (options.memory)
+        console.log(`[claudeflow] Memory: ${options.memory.keys().length} entries loaded`);
+      if (options.checkpoint) console.log("[claudeflow] Checkpointing enabled");
       console.log("");
     }
 
@@ -208,8 +211,12 @@ export class PipelineDef {
 
     if (options.verbose) {
       console.log("");
-      console.log(`[claudeflow] ${pipelineStatus === "completed" ? "✓" : "✗"} ${pipelineStatus} in ${trace.totalDurationMs}ms`);
-      console.log(`[claudeflow] Tokens: ${totalTokens.inputTokens} in / ${totalTokens.outputTokens} out`);
+      console.log(
+        `[claudeflow] ${pipelineStatus === "completed" ? "✓" : "✗"} ${pipelineStatus} in ${trace.totalDurationMs}ms`,
+      );
+      console.log(
+        `[claudeflow] Tokens: ${totalTokens.inputTokens} in / ${totalTokens.outputTokens} out`,
+      );
       console.log(`[claudeflow] Cost: $${totalCost.toFixed(4)}`);
     }
 
@@ -251,13 +258,16 @@ export class PipelineDef {
     }
 
     const trace = await this.#executeStep(stepDef, ctx, options);
-
-    if (trace.status === "completed" && trace.outputSnapshot !== undefined) {
-      ctx = advanceContext(ctx, stepDef.id, trace.outputSnapshot);
-    }
+    const nextCtx =
+      trace.status === "completed" && trace.outputSnapshot !== undefined
+        ? advanceContext(ctx, stepDef.id, trace.outputSnapshot)
+        : ctx;
 
     if (options.verbose) {
-      const tokens = trace.attempts.reduce((s, a) => s + a.usage.inputTokens + a.usage.outputTokens, 0);
+      const tokens = trace.attempts.reduce(
+        (s, a) => s + a.usage.inputTokens + a.usage.outputTokens,
+        0,
+      );
       if (stepDef.deterministic) {
         console.log(`✓ ${trace.durationMs}ms (deterministic)`);
       } else {
@@ -266,7 +276,7 @@ export class PipelineDef {
     }
 
     options.onStepEnd?.(stepDef.id, trace);
-    return { traces: [trace], ctx };
+    return { traces: [trace], ctx: nextCtx };
   }
 
   async #executeLoopNode(
@@ -277,17 +287,20 @@ export class PipelineDef {
   ): Promise<{ traces: StepTrace[]; ctx: Context }> {
     const traces: StepTrace[] = [];
     const label = loopDef.config.label ?? loopDef.step.id;
+    let loopCtx = ctx;
 
     for (let iteration = 0; iteration < loopDef.config.maxIterations; iteration++) {
       if (options.verbose) {
-        process.stdout.write(`[${nodeIndex + 1}/${this.nodes.length}] ${label} (iter ${iteration + 1}) `);
+        process.stdout.write(
+          `[${nodeIndex + 1}/${this.nodes.length}] ${label} (iter ${iteration + 1}) `,
+        );
       }
 
-      const trace = await this.#executeStep(loopDef.step, ctx, options);
+      const trace = await this.#executeStep(loopDef.step, loopCtx, options);
       traces.push(trace);
 
       if (trace.status === "completed" && trace.outputSnapshot !== undefined) {
-        ctx = advanceContext(ctx, loopDef.step.id, trace.outputSnapshot);
+        loopCtx = advanceContext(loopCtx, loopDef.step.id, trace.outputSnapshot);
       }
 
       if (options.verbose) {
@@ -295,7 +308,7 @@ export class PipelineDef {
       }
 
       // Check exit condition
-      if (loopDef.condition(ctx)) {
+      if (loopDef.condition(loopCtx)) {
         if (options.verbose) {
           console.log(`  loop "${label}" done after ${iteration + 1} iterations`);
         }
@@ -303,7 +316,7 @@ export class PipelineDef {
       }
     }
 
-    return { traces, ctx };
+    return { traces, ctx: loopCtx };
   }
 
   async #executeBranchNode(
@@ -320,16 +333,16 @@ export class PipelineDef {
     }
 
     const trace = await this.#executeStep(stepDef, ctx, options);
-
-    if (trace.status === "completed" && trace.outputSnapshot !== undefined) {
-      ctx = advanceContext(ctx, stepDef.id, trace.outputSnapshot);
-    }
+    const nextCtx =
+      trace.status === "completed" && trace.outputSnapshot !== undefined
+        ? advanceContext(ctx, stepDef.id, trace.outputSnapshot)
+        : ctx;
 
     if (options.verbose) {
       console.log(`✓ ${trace.durationMs}ms`);
     }
 
-    return { traces: [trace], ctx };
+    return { traces: [trace], ctx: nextCtx };
   }
 
   async #executeMapNode(
@@ -346,7 +359,9 @@ export class PipelineDef {
     }
 
     if (options.verbose) {
-      console.log(`[${nodeIndex + 1}/${this.nodes.length}] map "${mapDef.step.id}" over ${items.length} items`);
+      console.log(
+        `[${nodeIndex + 1}/${this.nodes.length}] map "${mapDef.step.id}" over ${items.length} items`,
+      );
     }
 
     const traces: StepTrace[] = new Array(items.length);
@@ -406,8 +421,8 @@ export class PipelineDef {
     }
 
     // Store map results as array keyed by step id
-    ctx = advanceContext(ctx, mapDef.step.id, results);
-    return { traces, ctx };
+    const nextCtx = advanceContext(ctx, mapDef.step.id, results);
+    return { traces, ctx: nextCtx };
   }
 
   async #executeToolNode(
@@ -419,12 +434,16 @@ export class PipelineDef {
     const stepStart = Date.now();
 
     if (options.verbose) {
-      process.stdout.write(`[${nodeIndex + 1}/${this.nodes.length}] tool:${toolNode.adapter}.${toolNode.action} `);
+      process.stdout.write(
+        `[${nodeIndex + 1}/${this.nodes.length}] tool:${toolNode.adapter}.${toolNode.action} `,
+      );
     }
 
     const adapter = options.tools?.get(toolNode.adapter);
     if (!adapter) {
-      throw new Error(`Tool adapter "${toolNode.adapter}" not found. Register it in PipelineRunOptions.tools`);
+      throw new Error(
+        `Tool adapter "${toolNode.adapter}" not found. Register it in PipelineRunOptions.tools`,
+      );
     }
 
     // Interpolate params
@@ -455,8 +474,8 @@ export class PipelineDef {
       outputSnapshot: output,
     };
 
-    ctx = advanceContext(ctx, toolNode.id, output);
-    return { traces: [trace], ctx };
+    const nextCtx = advanceContext(ctx, toolNode.id, output);
+    return { traces: [trace], ctx: nextCtx };
   }
 
   async #executeOptimizeNode(
@@ -468,21 +487,28 @@ export class PipelineDef {
     const config = optimizeDef.config;
     const label = config.label ?? "optimize";
     const traces: StepTrace[] = [];
+    let optimizeCtx = ctx;
 
     if (options.verbose) {
-      console.log(`[${nodeIndex + 1}/${this.nodes.length}] optimize "${label}" (max ${config.maxIterations} iterations, ${config.direction} is better)`);
+      console.log(
+        `[${nodeIndex + 1}/${this.nodes.length}] optimize "${label}" (max ${config.maxIterations} iterations, ${config.direction} is better)`,
+      );
     }
 
     // Get baseline metric
-    const baselineTrace = await this.#executeStep(optimizeDef.evalStep, ctx, options);
+    const baselineTrace = await this.#executeStep(optimizeDef.evalStep, optimizeCtx, options);
     traces.push(baselineTrace);
     if (baselineTrace.outputSnapshot) {
-      ctx = advanceContext(ctx, optimizeDef.evalStep.id, baselineTrace.outputSnapshot);
+      optimizeCtx = advanceContext(
+        optimizeCtx,
+        optimizeDef.evalStep.id,
+        baselineTrace.outputSnapshot,
+      );
     }
 
     const baselineOutput = baselineTrace.outputSnapshot as Record<string, unknown> | undefined;
     let bestMetric = Number(baselineOutput?.[config.metricKey] ?? 0);
-    ctx = advanceContext(ctx, "_best_metric", bestMetric);
+    optimizeCtx = advanceContext(optimizeCtx, "_best_metric", bestMetric);
 
     if (options.verbose) {
       console.log(`  baseline ${config.metricKey}: ${bestMetric}`);
@@ -517,7 +543,7 @@ export class PipelineDef {
       }
 
       // Mutate
-      const mutateTrace = await this.#executeStep(optimizeDef.mutateStep, ctx, options);
+      const mutateTrace = await this.#executeStep(optimizeDef.mutateStep, optimizeCtx, options);
       traces.push(mutateTrace);
 
       // Git: commit the mutation so we can revert cleanly
@@ -525,33 +551,42 @@ export class PipelineDef {
         try {
           const { execSync } = await import("node:child_process");
           const cwd = process.cwd();
-          execSync("git add -A && git commit -m 'optimize: experiment' --allow-empty --no-verify 2>/dev/null || true", { cwd, encoding: "utf-8" });
-        } catch { /* ignore */ }
+          execSync(
+            "git add -A && git commit -m 'optimize: experiment' --allow-empty --no-verify 2>/dev/null || true",
+            { cwd, encoding: "utf-8" },
+          );
+        } catch {
+          /* ignore */
+        }
       }
 
       // Evaluate
-      const evalTrace = await this.#executeStep(optimizeDef.evalStep, ctx, options);
+      const evalTrace = await this.#executeStep(optimizeDef.evalStep, optimizeCtx, options);
       traces.push(evalTrace);
 
       const evalOutput = evalTrace.outputSnapshot as Record<string, unknown> | undefined;
       const newMetric = Number(evalOutput?.[config.metricKey] ?? 0);
 
-      const isBetter = config.direction === "lower"
-        ? newMetric < bestMetric
-        : newMetric > bestMetric;
+      const isBetter =
+        config.direction === "lower" ? newMetric < bestMetric : newMetric > bestMetric;
 
       attempts.push({ iteration: i + 1, metric: newMetric, kept: isBetter });
 
       if (isBetter) {
         bestMetric = newMetric;
-        ctx = advanceContext(ctx, "_best_metric", bestMetric);
-        ctx = advanceContext(ctx, optimizeDef.evalStep.id, evalOutput);
+        optimizeCtx = advanceContext(optimizeCtx, "_best_metric", bestMetric);
+        optimizeCtx = advanceContext(optimizeCtx, optimizeDef.evalStep.id, evalOutput);
         // Update the "good" commit reference
         if (useGitIsolation) {
           try {
             const { execSync } = await import("node:child_process");
-            lastGoodCommit = execSync("git rev-parse HEAD", { cwd: process.cwd(), encoding: "utf-8" }).trim();
-          } catch { /* ignore */ }
+            lastGoodCommit = execSync("git rev-parse HEAD", {
+              cwd: process.cwd(),
+              encoding: "utf-8",
+            }).trim();
+          } catch {
+            /* ignore */
+          }
         }
         if (options.verbose) {
           console.log(`✓ ${config.metricKey}: ${newMetric} (improved, keeping)`);
@@ -564,13 +599,20 @@ export class PipelineDef {
         if (useGitIsolation && lastGoodCommit) {
           try {
             const { execSync } = await import("node:child_process");
-            execSync(`git reset --hard ${lastGoodCommit}`, { cwd: process.cwd(), encoding: "utf-8" });
+            execSync(`git reset --hard ${lastGoodCommit}`, {
+              cwd: process.cwd(),
+              encoding: "utf-8",
+            });
             if (options.verbose) {
-              console.log(`✗ ${config.metricKey}: ${newMetric} (reverted to ${lastGoodCommit.slice(0, 8)})`);
+              console.log(
+                `✗ ${config.metricKey}: ${newMetric} (reverted to ${lastGoodCommit.slice(0, 8)})`,
+              );
             }
           } catch {
             if (options.verbose) {
-              console.log(`✗ ${config.metricKey}: ${newMetric} (no improvement, git revert failed)`);
+              console.log(
+                `✗ ${config.metricKey}: ${newMetric} (no improvement, git revert failed)`,
+              );
             }
           }
         } else {
@@ -588,7 +630,7 @@ export class PipelineDef {
       keptCount: attempts.filter((a) => a.kept).length,
       attempts,
     };
-    ctx = advanceContext(ctx, `${label}_results`, summary);
+    optimizeCtx = advanceContext(optimizeCtx, `${label}_results`, summary);
 
     // Add a summary trace so result.output captures the optimization results
     traces.push({
@@ -603,10 +645,12 @@ export class PipelineDef {
 
     if (options.verbose) {
       const kept = attempts.filter((a) => a.kept).length;
-      console.log(`  optimize done: ${kept}/${attempts.length} kept, best ${config.metricKey}: ${bestMetric}`);
+      console.log(
+        `  optimize done: ${kept}/${attempts.length} kept, best ${config.metricKey}: ${bestMetric}`,
+      );
     }
 
-    return { traces, ctx };
+    return { traces, ctx: optimizeCtx };
   }
 
   async #executeStep(
@@ -754,12 +798,18 @@ function computeBackoff(config: NonNullable<StepDef["retry"]>, attempt: number):
 
 function getNodeId(node: PipelineNode): string {
   switch (node.type) {
-    case "step": return node.step.id;
-    case "loop": return `loop:${node.loop.step.id}`;
-    case "branch": return `branch:${node.branch.trueBranch.id}/${node.branch.falseBranch.id}`;
-    case "map": return `map:${node.map.step.id}`;
-    case "tool": return `tool:${node.tool.id}`;
-    case "optimize": return `optimize:${node.optimize.mutateStep.id}`;
+    case "step":
+      return node.step.id;
+    case "loop":
+      return `loop:${node.loop.step.id}`;
+    case "branch":
+      return `branch:${node.branch.trueBranch.id}/${node.branch.falseBranch.id}`;
+    case "map":
+      return `map:${node.map.step.id}`;
+    case "tool":
+      return `tool:${node.tool.id}`;
+    case "optimize":
+      return `optimize:${node.optimize.mutateStep.id}`;
   }
 }
 

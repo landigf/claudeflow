@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { ToolAdapter } from "./index.js";
 
@@ -44,7 +44,11 @@ export class FileTool implements ToolAdapter {
     const files = entries
       .filter((e) => {
         const full = path.join(dir, e);
-        try { return statSync(full).isFile(); } catch { return false; }
+        try {
+          return statSync(full).isFile();
+        } catch {
+          return false;
+        }
       })
       .filter((e) => !pattern || e.match(new RegExp(pattern)));
     return { files };

@@ -6,7 +6,20 @@ import type { StepDef } from "../core/step.js";
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   "claude-opus-4-6": { input: 15.0, output: 75.0 },
   "claude-sonnet-4-6": { input: 3.0, output: 15.0 },
-  "claude-haiku-4-5": { input: 0.8, output: 4.0 },
+  "claude-haiku-4-5": { input: 1.0, output: 5.0 },
+  "claude-opus-4-20250514": { input: 15.0, output: 75.0 },
+  "claude-sonnet-4-20250514": { input: 3.0, output: 15.0 },
+  "claude-haiku-4-5-20251001": { input: 1.0, output: 5.0 },
+  "gpt-5.4": { input: 2.5, output: 15.0 },
+  "gpt-5.4-mini": { input: 0.75, output: 4.5 },
+  "gpt-5.4-nano": { input: 0.2, output: 1.25 },
+  "gpt-5": { input: 1.25, output: 10.0 },
+  "gpt-5-mini": { input: 0.25, output: 2.0 },
+  "gpt-5-nano": { input: 0.05, output: 0.4 },
+  "gpt-4.1": { input: 2.0, output: 8.0 },
+  "gpt-4.1-mini": { input: 0.4, output: 1.6 },
+  "gpt-4.1-nano": { input: 0.1, output: 0.4 },
+  "gpt-4o-mini": { input: 0.15, output: 0.6 },
   default: { input: 3.0, output: 15.0 },
 };
 
@@ -110,26 +123,38 @@ export function analyze(pipeline: PipelineDef): PipelineAnalysis {
     modelBreakdown[bucket] = (modelBreakdown[bucket] ?? 0) + 1;
     if (!step.model) hasUnpinnedModel = true;
     if (step.model && !MODEL_PRICING[step.model]) {
-      warnings.push(`Step "${step.id}" uses unknown model "${step.model}" - priced with default rates only`);
+      warnings.push(
+        `Step "${step.id}" uses unknown model "${step.model}" - priced with default rates only`,
+      );
     }
   }
 
   const estimatedCost = buildPricingScenarios(llmSteps, hasUnpinnedModel);
 
   if (hasToolEnabledLlm) {
-    warnings.push("Tool-enabled LLM steps can expand context and runtime significantly - treat cost as a lower bound");
+    warnings.push(
+      "Tool-enabled LLM steps can expand context and runtime significantly - treat cost as a lower bound",
+    );
   }
   if (summary.loopCount > 0) {
-    warnings.push("Loop nodes are input-dependent - token and price totals include one body pass, not worst-case iteration counts");
+    warnings.push(
+      "Loop nodes are input-dependent - token and price totals include one body pass, not worst-case iteration counts",
+    );
   }
   if (summary.mapCount > 0) {
-    warnings.push("Map nodes have data-dependent fanout - token and price totals exclude collection-size amplification");
+    warnings.push(
+      "Map nodes have data-dependent fanout - token and price totals exclude collection-size amplification",
+    );
   }
   if (summary.branchCount > 0) {
-    warnings.push("Branch nodes are path-sensitive - static totals include both branches for footprint inspection");
+    warnings.push(
+      "Branch nodes are path-sensitive - static totals include both branches for footprint inspection",
+    );
   }
   if (summary.optimizeCount > 0) {
-    warnings.push("Optimize nodes are feedback-driven - mutate/evaluate bodies are counted once, not per optimization iteration");
+    warnings.push(
+      "Optimize nodes are feedback-driven - mutate/evaluate bodies are counted once, not per optimization iteration",
+    );
   }
 
   const runtimePredictability = classifyPredictability({
@@ -183,7 +208,9 @@ export function analyze(pipeline: PipelineDef): PipelineAnalysis {
 export function formatAnalysis(analysis: PipelineAnalysis): string {
   const lines: string[] = [];
   lines.push(`Pipeline: ${analysis.pipelineName}`);
-  lines.push(`Steps: ${analysis.stepCount} executable units (${analysis.llmStepCount} LLM, ${analysis.deterministicStepCount} deterministic)`);
+  lines.push(
+    `Steps: ${analysis.stepCount} executable units (${analysis.llmStepCount} LLM, ${analysis.deterministicStepCount} deterministic)`,
+  );
   if (analysis.controlFlowNodes > 0 || analysis.toolNodeCount > 0) {
     const parts: string[] = [];
     if (analysis.branchCount > 0) parts.push(`${analysis.branchCount} branch`);
@@ -196,8 +223,12 @@ export function formatAnalysis(analysis: PipelineAnalysis): string {
 
   lines.push("");
   lines.push("Prompt footprint heuristic:");
-  lines.push(`  Input:  ~${analysis.estimatedTokens.input.expected} (${analysis.estimatedTokens.input.min}-${analysis.estimatedTokens.input.max})`);
-  lines.push(`  Output: ~${analysis.estimatedTokens.output.expected} (${analysis.estimatedTokens.output.min}-${analysis.estimatedTokens.output.max})`);
+  lines.push(
+    `  Input:  ~${analysis.estimatedTokens.input.expected} (${analysis.estimatedTokens.input.min}-${analysis.estimatedTokens.input.max})`,
+  );
+  lines.push(
+    `  Output: ~${analysis.estimatedTokens.output.expected} (${analysis.estimatedTokens.output.min}-${analysis.estimatedTokens.output.max})`,
+  );
 
   if (Object.keys(analysis.modelBreakdown).length > 0) {
     lines.push("");
@@ -211,7 +242,9 @@ export function formatAnalysis(analysis: PipelineAnalysis): string {
     lines.push("");
     lines.push("Pricing scenarios (heuristic):");
     for (const [label, cost] of Object.entries(analysis.estimatedCost)) {
-      lines.push(`  ${formatScenarioLabel(label)}: $${cost.perRun.toFixed(4)} baseline, $${cost.withRetries.toFixed(4)} retry upper bound`);
+      lines.push(
+        `  ${formatScenarioLabel(label)}: $${cost.perRun.toFixed(4)} baseline, $${cost.withRetries.toFixed(4)} retry upper bound`,
+      );
     }
   }
 
@@ -271,33 +304,41 @@ function collectStaticSummary(pipeline: PipelineDef): {
       case "tool":
         toolNodeCount += 1;
         steps.push(summarizeToolNode(node.tool));
-        warnings.push(`Tool node "${node.tool.id}" is deterministic but its runtime depends on the external command/service it calls`);
+        warnings.push(
+          `Tool node "${node.tool.id}" is deterministic but its runtime depends on the external command/service it calls`,
+        );
         break;
       case "loop":
         controlFlowNodes += 1;
         loopCount += 1;
         steps.push(summarizeStep(node.loop.step, "loop", warnings));
-        warnings.push(`Loop "${node.loop.config.label ?? node.loop.step.id}" can run up to ${node.loop.config.maxIterations} times`);
+        warnings.push(
+          `Loop "${node.loop.config.label ?? node.loop.step.id}" can run up to ${node.loop.config.maxIterations} times`,
+        );
         break;
       case "branch":
         controlFlowNodes += 1;
         branchCount += 1;
         steps.push(summarizeStep(node.branch.trueBranch, "branch-true", warnings));
         steps.push(summarizeStep(node.branch.falseBranch, "branch-false", warnings));
-        warnings.push(`Branch node includes 2 possible paths; only one executes at runtime`);
+        warnings.push("Branch node includes 2 possible paths; only one executes at runtime");
         break;
       case "map":
         controlFlowNodes += 1;
         mapCount += 1;
         steps.push(summarizeStep(node.map.step, "map", warnings));
-        warnings.push(`Map "${node.map.step.id}" fans out over "{${node.map.arrayKey}}" and cannot be sized statically`);
+        warnings.push(
+          `Map "${node.map.step.id}" fans out over "{${node.map.arrayKey}}" and cannot be sized statically`,
+        );
         break;
       case "optimize":
         controlFlowNodes += 1;
         optimizeCount += 1;
         steps.push(summarizeStep(node.optimize.mutateStep, "optimize-mutate", warnings));
         steps.push(summarizeStep(node.optimize.evalStep, "optimize-evaluate", warnings));
-        warnings.push(`Optimize node can iterate up to ${node.optimize.config.maxIterations} times based on feedback`);
+        warnings.push(
+          `Optimize node can iterate up to ${node.optimize.config.maxIterations} times based on feedback`,
+        );
         break;
     }
   }
@@ -378,14 +419,16 @@ function priceSteps(
   let withRetries = 0;
 
   for (const step of steps) {
-    const pricing = step.model && MODEL_PRICING[step.model]
-      ? MODEL_PRICING[step.model]
-      : useScenarioForUnpinned
-        ? fallbackPricing
-        : MODEL_PRICING.default;
+    const pricing =
+      step.model && MODEL_PRICING[step.model]
+        ? MODEL_PRICING[step.model]
+        : useScenarioForUnpinned
+          ? fallbackPricing
+          : MODEL_PRICING.default;
 
-    const stepCost = (step.promptTokens / 1_000_000) * pricing.input
-      + (step.outputTokens / 1_000_000) * pricing.output;
+    const stepCost =
+      (step.promptTokens / 1_000_000) * pricing.input +
+      (step.outputTokens / 1_000_000) * pricing.output;
     perRun += stepCost;
     withRetries += stepCost * step.retryMaxAttempts;
   }
@@ -393,17 +436,24 @@ function priceSteps(
   return { perRun: round(perRun), withRetries: round(withRetries) };
 }
 
-function buildAssumptions(opts: { hasUnpinnedModel: boolean; hasToolEnabledLlm: boolean }): string[] {
+function buildAssumptions(opts: {
+  hasUnpinnedModel: boolean;
+  hasToolEnabledLlm: boolean;
+}): string[] {
   const assumptions = [
     "Prompt footprint is derived from static prompt templates and schemas only",
     "Interpolated runtime values can be much larger than the placeholders visible in YAML/TypeScript",
   ];
 
   if (opts.hasUnpinnedModel) {
-    assumptions.push("Unpinned LLM steps are priced as configured/default and also shown under alternate model scenarios");
+    assumptions.push(
+      "Unpinned LLM steps are priced as configured/default and also shown under alternate model scenarios",
+    );
   }
   if (opts.hasToolEnabledLlm) {
-    assumptions.push("Tool transcripts, file reads, and command output are not modeled precisely in static token totals");
+    assumptions.push(
+      "Tool transcripts, file reads, and command output are not modeled precisely in static token totals",
+    );
   }
 
   return assumptions;
@@ -418,12 +468,12 @@ function classifyPredictability(opts: {
   hasRetry: boolean;
 }): "high" | "medium" | "low" {
   const riskScore =
-    opts.branchCount
-    + opts.loopCount * 2
-    + opts.mapCount * 3
-    + opts.optimizeCount * 3
-    + (opts.hasToolEnabledLlm ? 2 : 0)
-    + (opts.hasRetry ? 1 : 0);
+    opts.branchCount +
+    opts.loopCount * 2 +
+    opts.mapCount * 3 +
+    opts.optimizeCount * 3 +
+    (opts.hasToolEnabledLlm ? 2 : 0) +
+    (opts.hasRetry ? 1 : 0);
 
   if (riskScore >= 4) return "low";
   if (riskScore >= 1) return "medium";
