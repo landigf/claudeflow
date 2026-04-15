@@ -84,8 +84,13 @@ export class OpenAICompatibleRuntime implements Runtime {
     const body: Record<string, unknown> = {
       model,
       messages,
-      max_tokens: this.#maxTokens,
     };
+
+    if (usesOpenAiMaxCompletionTokens(model, this.#baseUrl)) {
+      body.max_completion_tokens = this.#maxTokens;
+    } else {
+      body.max_tokens = this.#maxTokens;
+    }
 
     if (request.temperature != null) {
       body.temperature = request.temperature;
@@ -157,6 +162,10 @@ export class OpenAICompatibleRuntime implements Runtime {
       if (timeout) clearTimeout(timeout);
     }
   }
+}
+
+function usesOpenAiMaxCompletionTokens(model: string, baseUrl: string): boolean {
+  return baseUrl.includes("api.openai.com") && model.startsWith("gpt-5");
 }
 
 function extractMessageText(

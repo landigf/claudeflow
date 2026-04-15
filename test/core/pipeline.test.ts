@@ -144,6 +144,31 @@ describe("pipeline — retry and fallback", () => {
     expect(result.trace.steps[0].attempts[0].usage.inputTokens).toBe(40);
     expect(callCount).toBe(2);
   });
+
+  it("coerces plain text into a single-string object output schema", async () => {
+    const critique = step("critique")
+      .output(z.object({ scorecard: z.string() }))
+      .prompt("critique this idea");
+
+    const runtime = {
+      async execute() {
+        return {
+          text: "Strong demo value, medium implementation risk, tighten scope.",
+          usage: { inputTokens: 12, outputTokens: 10 },
+          costUsd: 0.001,
+          durationMs: 5,
+          model: "mock",
+        };
+      },
+    };
+
+    const result = await pipeline("coerce-text").step(critique).run({}, { runtime });
+
+    expect(result.trace.status).toBe("completed");
+    expect(result.output).toEqual({
+      scorecard: "Strong demo value, medium implementation risk, tighten scope.",
+    });
+  });
 });
 
 describe("pipeline — loop", () => {

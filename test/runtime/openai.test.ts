@@ -124,6 +124,38 @@ describe("OpenAICompatibleRuntime", () => {
     expect(result.text).toBe("hello world");
     expect(result.costUsd).toBeNull();
   });
+
+  it("uses max_completion_tokens for gpt-5 models on the OpenAI API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          model: "gpt-5-mini",
+          choices: [{ message: { content: '{"ok":true}' } }],
+          usage: { prompt_tokens: 10, completion_tokens: 4 },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+    global.fetch = fetchMock as typeof fetch;
+
+    const runtime = new OpenAICompatibleRuntime({
+      apiKey: "test-key",
+      model: "gpt-5-mini",
+    });
+
+    await runtime.execute({
+      prompt: "Return JSON",
+      outputSchema: z.object({ ok: z.boolean() }),
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(body.max_completion_tokens).toBe(4096);
+    expect(body.max_tokens).toBeUndefined();
+  });
 });
 
 describe("createRuntime", () => {

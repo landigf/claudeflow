@@ -741,17 +741,22 @@ export class PipelineDef {
           const parsed = JSON.parse(response.text);
           output = stepDef.outputSchema.parse(parsed);
         } catch {
-          lastError = `Output schema validation failed for step "${stepDef.id}"`;
-          attempts.push({
-            attemptNumber: attempt,
-            prompt,
-            response: response.text,
-            usage: response.usage,
-            costUsd: response.costUsd,
-            durationMs: Date.now() - attemptStart,
-            error: lastError,
-          });
-          continue;
+          const coerced = coerceSingleStringObject(stepDef.outputSchema, response.text);
+          if (coerced) {
+            output = coerced;
+          } else {
+            lastError = `Output schema validation failed for step "${stepDef.id}"`;
+            attempts.push({
+              attemptNumber: attempt,
+              prompt,
+              response: response.text,
+              usage: response.usage,
+              costUsd: response.costUsd,
+              durationMs: Date.now() - attemptStart,
+              error: lastError,
+            });
+            continue;
+          }
         }
       }
 
@@ -782,6 +787,23 @@ export class PipelineDef {
 
     throw new Error(`Step "${stepDef.id}" failed after ${maxAttempts} attempts: ${lastError}`);
   }
+}
+
+function coerceSingleStringObject(schema: StepDef["outputSchema"], text: string): unknown {
+  const raw = text.trim();
+  if (!schema || raw.length === 0) return undefined;
+
+  const shape = (schema as { _def?: { shape?: () => Record<string, unknown> } })._def?.shape?.();
+  if (!shape) return undefined;
+
+  const entries = Object.entries(shape);
+  if (entries.length !== 1) return undefined;
+
+  const [key, value] = entries[0];
+  const typeName = (value as { _def?: { typeName?: string } })._def?.typeName;
+  if (typeName !== "ZodString") return undefined;
+
+  return schema.parse({ [key]: raw });
 }
 
 function computeBackoff(config: NonNullable<StepDef["retry"]>, attempt: number): number {

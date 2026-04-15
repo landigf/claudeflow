@@ -604,6 +604,8 @@ function renderGitignoreSection(): string {
     ".claudeflow/checkpoints/",
     ".claudeflow/memory/",
     "traces/",
+    "pipelines/.claudeflow/",
+    "pipelines/traces/",
     ".env",
     ".env.local",
     ".DS_Store",
