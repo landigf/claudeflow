@@ -46,6 +46,8 @@ Team workflow rules:
 3. Treat `03-tasks.md` as the source of truth for execution status.
 4. Keep `05-feedback.md` append-only until the team explicitly resolves an item.
 5. Start with the `cheap` runtime profile for ideation and drafting. Escalate to `deep` only when the task truly needs stronger reasoning.
+6. If Ollama is available, use the `local` profile aggressively for bulk drafting, review loops, summaries, rewrites, and intermediate code passes.
+7. In hackathon mode, use Gemini as the main hosted path, OpenAI only for important research or strong second opinions, and Claude for interactive coding plus final verification.
 
 Runtime profiles:
 - `cheap`: openai / gpt-5-mini

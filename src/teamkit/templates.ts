@@ -40,6 +40,13 @@ export function defaultAssistants(): AssistantSurface[] {
   return ["claude", "codex", "copilot"];
 }
 
+function scenarioRuntimeProfiles(
+  preset: TeamKitPreset,
+  assistants: AssistantSurface[] = defaultAssistants(),
+): TeamKitConfig["runtimeProfiles"] {
+  return buildTeamKitConfig(preset, assistants, [preset], new Date(0)).runtimeProfiles;
+}
+
 export function buildTeamKitConfig(
   preset: TeamKitPreset,
   assistants: AssistantSurface[],
@@ -53,14 +60,14 @@ export function buildTeamKitConfig(
           model: "gemini-2.5-flash-lite",
           baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
           recommendedFor: [
-            "hackathon ideation",
+            "main hosted hackathon path",
             "structured drafting",
             "sponsor-aligned multimodal experiments",
             "high-volume teammate requests",
           ],
           doctor: {
             env: ["GEMINI_API_KEY"],
-            note: "Hackathon mode prefers Gemini as the cheap path when Google credits or Gemini billing are available.",
+            note: "Hackathon mode uses Gemini as the main hosted path for ideation, drafting, and most teammate requests.",
           },
         }
       : {
@@ -74,6 +81,63 @@ export function buildTeamKitConfig(
           },
         };
 
+  const deepProfile =
+    preset === "hackathon"
+      ? {
+          provider: "claude-cli" as const,
+          model: "claude-sonnet-4-20250514",
+          permissionMode: "plan" as const,
+          recommendedFor: [
+            "interactive coding with Claude Max",
+            "final implementation review",
+            "final validation",
+            "last-mile debugging",
+          ],
+          doctor: {
+            command: "claude",
+            note: "Hackathon mode keeps Claude for interactive coding, final reviews, and true last-mile test passes.",
+          },
+        }
+      : {
+          provider: "claude-cli" as const,
+          model: "claude-sonnet-4-20250514",
+          permissionMode: "plan" as const,
+          recommendedFor: ["deep synthesis", "code review", "high-stakes technical reasoning"],
+          doctor: {
+            command: "claude",
+            note: "Deep is for harder review/synthesis when cheap mode is not enough.",
+          },
+        };
+
+  const localProfile =
+    preset === "hackathon"
+      ? {
+          provider: "ollama" as const,
+          model: "auto",
+          baseUrl: "http://127.0.0.1:11434/v1",
+          recommendedFor: [
+            "bulk drafting",
+            "review crews",
+            "summaries and rewrites",
+            "intermediate code passes",
+            "low-cost local helper runs",
+          ],
+          doctor: {
+            command: "ollama",
+            note: "Hackathon mode expects assistants to use local Ollama aggressively for bulk work when it is available.",
+          },
+        }
+      : {
+          provider: "ollama" as const,
+          model: "auto",
+          baseUrl: "http://127.0.0.1:11434/v1",
+          recommendedFor: ["private drafts", "offline iteration", "low-cost local runs"],
+          doctor: {
+            command: "ollama",
+            note: "Local is optional. Install Ollama or point OLLAMA_BASE_URL at a compatible server.",
+          },
+        };
+
   return {
     version: 2,
     preset,
@@ -81,26 +145,8 @@ export function buildTeamKitConfig(
     assistants,
     runtimeProfiles: {
       cheap: cheapProfile,
-      deep: {
-        provider: "claude-cli",
-        model: "claude-sonnet-4-20250514",
-        permissionMode: "plan",
-        recommendedFor: ["deep synthesis", "code review", "high-stakes technical reasoning"],
-        doctor: {
-          command: "claude",
-          note: "Deep is for harder review/synthesis when cheap mode is not enough.",
-        },
-      },
-      local: {
-        provider: "ollama",
-        model: "auto",
-        baseUrl: "http://127.0.0.1:11434/v1",
-        recommendedFor: ["private drafts", "offline iteration", "low-cost local runs"],
-        doctor: {
-          command: "ollama",
-          note: "Local is optional. Install Ollama or point OLLAMA_BASE_URL at a compatible server.",
-        },
-      },
+      deep: deepProfile,
+      local: localProfile,
     },
     generatedBy: "claudeflow",
     generatedAt: now.toISOString(),
@@ -180,7 +226,7 @@ export function buildTeamKitAssets(config: TeamKitConfig): TeamKitAsset[] {
     {
       path: "explainit/macbook-m3-pro.md",
       kind: "managed-file",
-      content: renderMacbookGuide(config),
+      content: renderMacbookGuide(),
     },
     {
       path: ".env.example",
@@ -336,6 +382,7 @@ function buildClaudeCommandAssets(preset: TeamKitPreset): TeamKitAsset[] {
 }
 
 function buildHackathonAssets(config: TeamKitConfig): TeamKitAsset[] {
+  const hackathonProfiles = scenarioRuntimeProfiles("hackathon", config.assistants);
   return [
     {
       path: "explainit/gdg-ai-hack-2026/README.md",
@@ -345,12 +392,12 @@ function buildHackathonAssets(config: TeamKitConfig): TeamKitAsset[] {
     {
       path: "explainit/gdg-ai-hack-2026/braynr-learning.md",
       kind: "managed-file",
-      content: renderBraynrTrackGuide(config),
+      content: renderBraynrTrackGuide(hackathonProfiles),
     },
     {
       path: "explainit/gdg-ai-hack-2026/luxonis-spatial-ai.md",
       kind: "managed-file",
-      content: renderLuxonisTrackGuide(config),
+      content: renderLuxonisTrackGuide(hackathonProfiles),
     },
     {
       path: "explainit/gdg-ai-hack-2026/msi-on-device-ai.md",
@@ -362,7 +409,7 @@ function buildHackathonAssets(config: TeamKitConfig): TeamKitAsset[] {
       kind: "managed-file",
       content: renderPipelineReadme("Hackathon pipelines", [
         "These are starter YAML workflows for advanced users. Non-CS teammates should usually begin with the Team Kit docs and assistant commands.",
-        `Default runtime profile: \`cheap\` (${config.runtimeProfiles.cheap.model})`,
+        `Default runtime profile: \`cheap\` (${hackathonProfiles.cheap.model})`,
         "Escalate to `deep` when you need stronger synthesis or code-heavy reasoning.",
       ]),
     },
@@ -372,7 +419,7 @@ function buildHackathonAssets(config: TeamKitConfig): TeamKitAsset[] {
       content: renderPipelineReadme("GDG AI HACK 2026 track packs", [
         "Use these when you already know which main track you want to target.",
         "Each track pack turns the current repo into concrete ideas, a demo plan, and a sponsor-aware architecture direction.",
-        `Default cheap runtime: \`${config.runtimeProfiles.cheap.model}\``,
+        `Default cheap runtime: \`${hackathonProfiles.cheap.model}\``,
       ]),
     },
     {
@@ -483,6 +530,12 @@ function renderAgentsSection(config: TeamKitConfig): string {
     "3. Treat `03-tasks.md` as the source of truth for execution status.",
     "4. Keep `05-feedback.md` append-only until the team explicitly resolves an item.",
     "5. Start with the `cheap` runtime profile for ideation and drafting. Escalate to `deep` only when the task truly needs stronger reasoning.",
+    ...(config.enabledPresets.includes("hackathon")
+      ? [
+          "6. If Ollama is available, use the `local` profile aggressively for bulk drafting, review loops, summaries, rewrites, and intermediate code passes.",
+          "7. In hackathon mode, use Gemini as the main hosted path, OpenAI only for important research or strong second opinions, and Claude for interactive coding plus final verification.",
+        ]
+      : []),
     "",
     "Runtime profiles:",
     `- \`cheap\`: ${config.runtimeProfiles.cheap.provider} / ${config.runtimeProfiles.cheap.model}`,
@@ -512,6 +565,12 @@ function renderCopilotInstructions(config: TeamKitConfig): string {
     "- For new feature ideas, start with `01-brainstorm.md`, then move to `02-specification.md`, then `03-tasks.md`.",
     "- Keep proposals grounded in the current repository, not generic suggestions.",
     "- Default to the `cheap` runtime profile for drafts and ideation.",
+    ...(config.enabledPresets.includes("hackathon")
+      ? [
+          "- If Ollama is available, use the `local` profile aggressively for bulk drafting, review loops, summaries, and intermediate code passes.",
+          "- In hackathon mode, treat Gemini as the main hosted path, OpenAI as a deliberate research or second-opinion path, and Claude as the final coding and verification path.",
+        ]
+      : []),
     "",
     `Default preset: \`${config.preset}\``,
     `Enabled presets: \`${config.enabledPresets.join(", ")}\``,
@@ -538,6 +597,12 @@ function renderClaudeReadme(config: TeamKitConfig): string {
     "- read prior lifecycle docs before generating later ones",
     "- keep `03-tasks.md` as the source of truth",
     "- start with the `cheap` runtime profile unless stronger reasoning is required",
+    ...(config.enabledPresets.includes("hackathon")
+      ? [
+          "- if Ollama is available, use the `local` profile aggressively for bulk drafting, review loops, summaries, rewrites, and intermediate code passes",
+          "- in hackathon mode, use Gemini as the main hosted path, reserve OpenAI for important research or serious second opinions, and reserve Claude for interactive coding plus final verification",
+        ]
+      : []),
     "",
   ].join("\n");
 }
@@ -594,6 +659,16 @@ function renderRepoReadmeSection(config: TeamKitConfig): string {
     `- \`local\`: ${config.runtimeProfiles.local.provider} / ${config.runtimeProfiles.local.model}`,
     "",
     "Teammates should start with `cheap` unless the task clearly needs deeper reasoning or a private local run.",
+    ...(config.enabledPresets.includes("hackathon")
+      ? [
+          "",
+          "Hackathon operating mode:",
+          "- Use local Ollama aggressively for bulk drafting, review loops, summaries, rewrites, and intermediate code passes.",
+          "- Use Gemini as the main hosted path for most structured requests.",
+          "- Use OpenAI only when you want important research or a serious second opinion.",
+          "- Use Claude for interactive coding, final review, and final verification runs.",
+        ]
+      : []),
     "",
   ].join("\n");
 }
@@ -622,18 +697,20 @@ function renderEnvExample(config: TeamKitConfig): string {
     `CLAUDEFLOW_RUNTIME=${config.runtimeProfiles.cheap.provider}`,
     `CLAUDEFLOW_MODEL=${config.runtimeProfiles.cheap.model}`,
     "",
-    "# Cheap hosted path",
+    "# Main hosted path for hackathon work and the default structured-request path",
     "GEMINI_API_KEY=",
     "GEMINI_MODEL=gemini-2.5-flash-lite",
     "GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai",
+    "",
+    "# Optional research / serious-second-opinion path",
     "OPENAI_API_KEY=",
     "OPENAI_MODEL=gpt-5-mini",
     "",
-    "# Deep path",
+    "# Claude path for interactive coding, final review, and final verification",
     "ANTHROPIC_API_KEY=",
     "ANTHROPIC_MODEL=claude-sonnet-4-20250514",
     "",
-    "# Local path",
+    "# Local worker path for bulk drafting, reviews, summaries, rewrites, and low-cost helper runs",
     "OLLAMA_BASE_URL=http://127.0.0.1:11434/v1",
     "OLLAMA_MODEL=auto",
     "",
@@ -782,6 +859,7 @@ function renderExplainItReadme(): string {
 }
 
 function renderExplainItHackathon(config: TeamKitConfig): string {
+  const profiles = scenarioRuntimeProfiles("hackathon", config.assistants);
   return [
     "# ClaudeFlow for a Hackathon",
     "",
@@ -801,6 +879,7 @@ function renderExplainItHackathon(config: TeamKitConfig): string {
     "3. Break it into `03-tasks.md`.",
     "4. Write `04-implementation.md` as the handoff for the person doing the coding.",
     "5. Append lessons and critiques to `05-feedback.md`.",
+    "6. For investigations or market/product research, use `pipelines/research-topic.yaml` or a `tool: web` step so the output keeps real source links.",
     "",
     "## What to ask your assistant",
     '- "Read `explainit/hackathon.md`, `AGENTS.md`, and the repo README, then propose 3 grounded hackathon ideas."',
@@ -808,10 +887,18 @@ function renderExplainItHackathon(config: TeamKitConfig): string {
     '- "Use the ClaudeFlow hackathon workflow and write `doc/specs/<slug>/01-brainstorm.md`."',
     '- "Turn this brainstorm into `02-specification.md` and `03-tasks.md` in a way a teammate can follow."',
     "",
+    "## The intended operating mode",
+    "- Write real code with Claude Max or Claude Code when you need hands-on implementation help.",
+    "- Let local Ollama run as much bulk work as possible: brainstorming, rewrites, summaries, review crews, task splitting, and intermediate code passes.",
+    "- Use Gemini as the main hosted API for most structured requests and teammate-facing drafting.",
+    "- Use OpenAI only for important research, stronger external perspective, or a serious second opinion.",
+    "- Use Claude-backed ClaudeFlow runs mainly for final review, final test/verify passes, and true last-mile debugging.",
+    "",
     "## Which runtime to use",
-    `- Start with \`cheap\`: ${config.runtimeProfiles.cheap.provider} / ${config.runtimeProfiles.cheap.model}. This is the default for ideation, drafting, and structured requests.`,
-    `- Use \`deep\`: ${config.runtimeProfiles.deep.provider} / ${config.runtimeProfiles.deep.model} only for harder synthesis, final critiques, or code-heavy reasoning.`,
-    `- Use \`local\`: ${config.runtimeProfiles.local.provider} / ${config.runtimeProfiles.local.model} only if someone already has Ollama set up or if privacy matters.`,
+    `- Start with \`local\`: ${profiles.local.provider} / ${profiles.local.model} whenever Ollama is available. It is the preferred bulk worker for drafting, reviews, summaries, and low-cost helper tasks.`,
+    `- Use \`cheap\`: ${profiles.cheap.provider} / ${profiles.cheap.model} as the main hosted path for structured requests, ideation, drafting, and teammate workflows.`,
+    "- Use OpenAI as a manual override with `--runtime openai` only when you want important research or a serious second opinion.",
+    `- Use \`deep\`: ${profiles.deep.provider} / ${profiles.deep.model} for interactive coding support, final critiques, final verification, and real last-mile debugging.`,
     "",
     "## How to handle API keys with teammates",
     "- Do not commit real keys to the repo.",
@@ -828,23 +915,25 @@ function renderExplainItHackathon(config: TeamKitConfig): string {
     "",
     "## Best setup for GDG AI HACK 2026",
     "- The event is short and build-first. Optimize for speed and reliability, not for fancy infrastructure.",
-    "- GDG AI HACK gives useful sponsor resources including Google Cloud credits and Gemini API access. If you already have Gemini billing or sponsor credits, use Gemini first for the `cheap` path.",
-    "- Keep Claude for the hard high-leverage steps. Use Gemini, other cheap APIs, or Ollama for reviewer crews, summaries, and drafting.",
+    "- GDG AI HACK gives useful sponsor resources including Google Cloud credits and Gemini API access. Use Gemini as the main hosted path first.",
+    "- If Ollama is already working on your MacBook, lean on it heavily instead of paying for bulk helper calls.",
+    "- Keep Claude for real coding help, final reviews, and final verification instead of burning it on bulk drafting.",
     "- The safest overall plan is still laptop-first with hosted APIs as backup capacity.",
     "",
     "## Recommended architecture",
-    "- Use raw Claude or Claude Code for quick one-off thinking and last-mile debugging.",
+    "- Use raw Claude or Claude Code for actual coding sessions and the hardest last-mile debugging.",
     "- Use ClaudeFlow for repeatable work: review, critique, fix-and-verify, handoff, and pitch polish.",
-    "- Let `cheap` do most of the volume.",
-    "- Let `deep` be the final judge.",
-    "- Let `local` help only if someone has already prepared it.",
+    "- Let `local` do as much grunt work as possible when it is available.",
+    "- Let Gemini be the default hosted path.",
+    "- Let OpenAI act as the deliberate research or second-opinion path.",
+    "- Let Claude be the final judge and final verifier.",
     "",
     "## What API key to buy first",
-    "- If you already have `GEMINI_API_KEY` funding or sponsor credits, use Gemini first for the `cheap` profile.",
-    "- If you do not have Gemini funding, buy an OpenAI API key next and use `gpt-5-mini` as the simple second path.",
-    "- If you already pay for Claude and want stronger reviews or coding help, keep Claude as the `deep` option instead of forcing everyone onto it.",
-    "- Do not block the team on a local model. Local is optional, not the default path.",
-    "- The right order for this hackathon is usually: Gemini credits first, Claude for deep work, OpenAI as a backup if needed, local only after that.",
+    "- If local Ollama is already installed, use it first for volume work because it is effectively free once set up.",
+    "- Use `GEMINI_API_KEY` as the main hosted API spend for hackathon work.",
+    "- Add `OPENAI_API_KEY` only for important research or a serious second opinion when Gemini is not enough.",
+    "- Keep Claude Max or Claude API for interactive coding help, final reviews, and final test passes instead of using it as the bulk worker.",
+    "- The right order for this hackathon is usually: local first for volume, Gemini for main hosted work, OpenAI for selected research, Claude for final coding and verification.",
     "",
     "## Repo organization rules",
     "- Keep feature thinking in `doc/specs/<slug>/`, not scattered across chats.",
@@ -854,8 +943,8 @@ function renderExplainItHackathon(config: TeamKitConfig): string {
     "",
     "## When a local model makes sense",
     "- You already have Ollama installed and someone knows how to maintain it.",
-    "- You want cheap private drafts or quick rewrites.",
-    "- You are okay with weaker quality than the paid `cheap` or `deep` options.",
+    "- You want to offload bulk drafts, rewrites, summaries, review loops, or intermediate code passes without paying per call.",
+    "- You are okay with using hosted models only for the truly important moments.",
     "",
     "## Best local model picks",
     "- Automatic default: `auto`",
@@ -875,15 +964,16 @@ function renderExplainItHackathon(config: TeamKitConfig): string {
 }
 
 function renderExplainItStartup(config: TeamKitConfig): string {
+  const profiles = scenarioRuntimeProfiles("startup", config.assistants);
   return [
     "# ClaudeFlow for an AI-Run Startup",
     "",
     "This file explains how to use ClaudeFlow when the technical side of the startup is mostly run by AI and you want recurring insight, critique, and improvement loops.",
     "",
     "## The recommended setup",
-    `- Use \`cheap\` (${config.runtimeProfiles.cheap.provider} / ${config.runtimeProfiles.cheap.model}) for daily and nightly drafting, triage, review summaries, and backlog generation.`,
-    `- Use \`deep\` (${config.runtimeProfiles.deep.provider} / ${config.runtimeProfiles.deep.model}) for harder synthesis, final review, architecture critique, and high-stakes decisions.`,
-    `- Keep \`local\` (${config.runtimeProfiles.local.provider} / ${config.runtimeProfiles.local.model}) as an optional privacy/cost tool, not as the main production brain.`,
+    `- Use \`cheap\` (${profiles.cheap.provider} / ${profiles.cheap.model}) for daily and nightly drafting, triage, review summaries, and backlog generation.`,
+    `- Use \`deep\` (${profiles.deep.provider} / ${profiles.deep.model}) for harder synthesis, final review, architecture critique, and high-stakes decisions.`,
+    `- Keep \`local\` (${profiles.local.provider} / ${profiles.local.model}) as an optional privacy/cost tool, not as the main production brain.`,
     "",
     "## What API key to buy first",
     "- Buy the `cheap` provider first. This is the best first spend because it covers the high-volume recurring work.",
@@ -931,17 +1021,18 @@ function renderExplainItStartup(config: TeamKitConfig): string {
   ].join("\n");
 }
 
-function renderMacbookGuide(config: TeamKitConfig): string {
+function renderMacbookGuide(): string {
   return [
     "# ClaudeFlow on a MacBook Pro M3 Pro",
     "",
     "This guide is for running ClaudeFlow well on Apple Silicon without turning the laptop into a science project.",
     "",
     "## The practical recommendation",
-    `- Keep \`cheap\` (${config.runtimeProfiles.cheap.model}) as the default for daily ideation, drafting, and teammate workflows.`,
-    `- Keep \`deep\` (${config.runtimeProfiles.deep.model}) for the hardest reasoning and final judgment.`,
-    "- Use `local` (`auto`) as a worker model for drafts, reviews, summarization, and low-stakes code passes.",
-    "- If your team already has Gemini credits, it is a strong cheap hosted path before opening another paid API account.",
+    "- Use Claude Max or Claude Code for the real coding loop when you want hands-on implementation help.",
+    "- Use `local` (`auto`) aggressively for drafts, reviews, summarization, rewrites, task splitting, and intermediate code passes.",
+    "- Use Gemini as the main hosted path for most structured requests and teammate workflows.",
+    "- Use OpenAI only for important research or a serious second opinion.",
+    "- Keep Claude-backed ClaudeFlow runs for final review, final judgment, and final verification.",
     "",
     "## Why your M3 Pro is good enough",
     "- Apple Silicon is a strong local-model machine because of unified memory and GPU acceleration.",
@@ -959,14 +1050,16 @@ function renderMacbookGuide(config: TeamKitConfig): string {
     "## Which one to use",
     "- If you have 18 GB unified memory, start with 3B to 8B class models and keep other heavy apps closed.",
     "- If you have 36 GB or more, 12B to 14B models become much more realistic for serious local work.",
-    "- Use local models for reviewer crews, categorization, summarization, test suggestions, and rough rewrites.",
+    "- Use local models for reviewer crews, categorization, summarization, test suggestions, rough rewrites, and intermediate code passes.",
     "- Do not rely on a local model alone for the final architectural or product decision if a stronger hosted model is available.",
     "",
     "## The best hackathon setup on this laptop",
-    "1. Use Claude or another strong hosted model for the hard thinking and last-mile debugging.",
-    "2. Use the `cheap` profile for most structured drafting and team-facing docs.",
-    "3. Use local Ollama models for repeated review loops and low-cost helpers.",
-    "4. Only touch cloud GPU deployment if the final demo itself needs hosted inference.",
+    "1. Code with Claude Max or Claude Code when you need real implementation help.",
+    "2. Let local Ollama do as much bulk helper work as possible.",
+    "3. Use Gemini as the main hosted path for structured requests and teammate docs.",
+    "4. Use OpenAI only for important research or a strong second opinion.",
+    "5. Use Claude-backed ClaudeFlow runs for final review and final test passes.",
+    "6. Only touch cloud GPU deployment if the final demo itself needs hosted inference.",
     "",
     "## Commands to start with",
     "```bash",
@@ -979,7 +1072,7 @@ function renderMacbookGuide(config: TeamKitConfig): string {
     "- `claudeflow doctor` warns if the auto-router models are missing.",
     "",
     "## When not to overcomplicate it",
-    "- If the team needs results fast, use hosted APIs first.",
+    "- If the team needs results fast, keep the split simple: local for bulk work, Gemini for default hosted work, Claude for the final gate.",
     "- If the laptop starts swapping memory or slowing the rest of your work, step back to a smaller model or go back to `cheap`.",
     "- Local is there to save cost and add resilience, not to become the whole product strategy.",
     "",
@@ -1024,7 +1117,7 @@ function renderGdgHackReadme(): string {
   ].join("\n");
 }
 
-function renderBraynrTrackGuide(config: TeamKitConfig): string {
+function renderBraynrTrackGuide(runtimeProfiles: TeamKitConfig["runtimeProfiles"]): string {
   return [
     "# Braynr Track: EdTech & Learning",
     "",
@@ -1047,7 +1140,7 @@ function renderBraynrTrackGuide(config: TeamKitConfig): string {
     "- Google/Gemini can help with hosted reasoning, multimodal analysis, or document understanding.",
     "- ElevenLabs fits well if voice tutoring or spoken feedback is central.",
     "- GitHub Education and Replit help if the demo includes classroom or student developer workflows.",
-    `- Use \`cheap\` (${config.runtimeProfiles.cheap.model}) for ideation and drafting, and \`deep\` for final critique.`,
+    `- Use \`cheap\` (${runtimeProfiles.cheap.model}) for ideation and drafting, and \`deep\` for final critique.`,
     "",
     "## What to avoid",
     "- A generic tutor with no real wedge",
@@ -1060,7 +1153,7 @@ function renderBraynrTrackGuide(config: TeamKitConfig): string {
   ].join("\n");
 }
 
-function renderLuxonisTrackGuide(config: TeamKitConfig): string {
+function renderLuxonisTrackGuide(runtimeProfiles: TeamKitConfig["runtimeProfiles"]): string {
   return [
     "# Luxonis Track: Spatial AI & Vision",
     "",
@@ -1083,7 +1176,7 @@ function renderLuxonisTrackGuide(config: TeamKitConfig): string {
     "- Google/Gemini can help with higher-level reasoning on top of detected events.",
     "- Replit is useful for quick demo dashboards.",
     "- M5Stack or related device sponsors can help if the demo crosses into sensors or physical interaction.",
-    `- Use \`local\` (${config.runtimeProfiles.local.model}) for review crews, but keep actual perception demos grounded in the camera stack.`,
+    `- Use \`local\` (${runtimeProfiles.local.model}) for review crews, but keep actual perception demos grounded in the camera stack.`,
     "",
     "## What to avoid",
     "- A vision demo with no clear user outcome",

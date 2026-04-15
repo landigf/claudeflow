@@ -16,6 +16,7 @@ This file is for teammates who are joining a hackathon repo and want clear struc
 3. Break it into `03-tasks.md`.
 4. Write `04-implementation.md` as the handoff for the person doing the coding.
 5. Append lessons and critiques to `05-feedback.md`.
+6. For investigations or market/product research, use `pipelines/research-topic.yaml` or a `tool: web` step so the output keeps real source links.
 
 ## What to ask your assistant
 - "Read `explainit/hackathon.md`, `AGENTS.md`, and the repo README, then propose 3 grounded hackathon ideas."
@@ -23,10 +24,18 @@ This file is for teammates who are joining a hackathon repo and want clear struc
 - "Use the ClaudeFlow hackathon workflow and write `doc/specs/<slug>/01-brainstorm.md`."
 - "Turn this brainstorm into `02-specification.md` and `03-tasks.md` in a way a teammate can follow."
 
+## The intended operating mode
+- Write real code with Claude Max or Claude Code when you need hands-on implementation help.
+- Let local Ollama run as much bulk work as possible: brainstorming, rewrites, summaries, review crews, task splitting, and intermediate code passes.
+- Use Gemini as the main hosted API for most structured requests and teammate-facing drafting.
+- Use OpenAI only for important research, stronger external perspective, or a serious second opinion.
+- Use Claude-backed ClaudeFlow runs mainly for final review, final test/verify passes, and true last-mile debugging.
+
 ## Which runtime to use
-- Start with `cheap`: openai / gpt-5-mini. This is the default for ideation, drafting, and structured requests.
-- Use `deep`: claude-cli / claude-sonnet-4-20250514 only for harder synthesis, final critiques, or code-heavy reasoning.
-- Use `local`: ollama / auto only if someone already has Ollama set up or if privacy matters.
+- Start with `local`: ollama / auto whenever Ollama is available. It is the preferred bulk worker for drafting, reviews, summaries, and low-cost helper tasks.
+- Use `cheap`: gemini / gemini-2.5-flash-lite as the main hosted path for structured requests, ideation, drafting, and teammate workflows.
+- Use OpenAI as a manual override with `--runtime openai` only when you want important research or a serious second opinion.
+- Use `deep`: claude-cli / claude-sonnet-4-20250514 for interactive coding support, final critiques, final verification, and real last-mile debugging.
 
 ## How to handle API keys with teammates
 - Do not commit real keys to the repo.
@@ -43,23 +52,25 @@ This file is for teammates who are joining a hackathon repo and want clear struc
 
 ## Best setup for GDG AI HACK 2026
 - The event is short and build-first. Optimize for speed and reliability, not for fancy infrastructure.
-- GDG AI HACK gives useful sponsor resources including Google Cloud credits and Gemini API access. If you already have Gemini billing or sponsor credits, use Gemini first for the `cheap` path.
-- Keep Claude for the hard high-leverage steps. Use Gemini, other cheap APIs, or Ollama for reviewer crews, summaries, and drafting.
+- GDG AI HACK gives useful sponsor resources including Google Cloud credits and Gemini API access. Use Gemini as the main hosted path first.
+- If Ollama is already working on your MacBook, lean on it heavily instead of paying for bulk helper calls.
+- Keep Claude for real coding help, final reviews, and final verification instead of burning it on bulk drafting.
 - The safest overall plan is still laptop-first with hosted APIs as backup capacity.
 
 ## Recommended architecture
-- Use raw Claude or Claude Code for quick one-off thinking and last-mile debugging.
+- Use raw Claude or Claude Code for actual coding sessions and the hardest last-mile debugging.
 - Use ClaudeFlow for repeatable work: review, critique, fix-and-verify, handoff, and pitch polish.
-- Let `cheap` do most of the volume.
-- Let `deep` be the final judge.
-- Let `local` help only if someone has already prepared it.
+- Let `local` do as much grunt work as possible when it is available.
+- Let Gemini be the default hosted path.
+- Let OpenAI act as the deliberate research or second-opinion path.
+- Let Claude be the final judge and final verifier.
 
 ## What API key to buy first
-- If you already have `GEMINI_API_KEY` funding or sponsor credits, use Gemini first for the `cheap` profile.
-- If you do not have Gemini funding, buy an OpenAI API key next and use `gpt-5-mini` as the simple second path.
-- If you already pay for Claude and want stronger reviews or coding help, keep Claude as the `deep` option instead of forcing everyone onto it.
-- Do not block the team on a local model. Local is optional, not the default path.
-- The right order for this hackathon is usually: Gemini credits first, Claude for deep work, OpenAI as a backup if needed, local only after that.
+- If local Ollama is already installed, use it first for volume work because it is effectively free once set up.
+- Use `GEMINI_API_KEY` as the main hosted API spend for hackathon work.
+- Add `OPENAI_API_KEY` only for important research or a serious second opinion when Gemini is not enough.
+- Keep Claude Max or Claude API for interactive coding help, final reviews, and final test passes instead of using it as the bulk worker.
+- The right order for this hackathon is usually: local first for volume, Gemini for main hosted work, OpenAI for selected research, Claude for final coding and verification.
 
 ## Repo organization rules
 - Keep feature thinking in `doc/specs/<slug>/`, not scattered across chats.
@@ -69,8 +80,8 @@ This file is for teammates who are joining a hackathon repo and want clear struc
 
 ## When a local model makes sense
 - You already have Ollama installed and someone knows how to maintain it.
-- You want cheap private drafts or quick rewrites.
-- You are okay with weaker quality than the paid `cheap` or `deep` options.
+- You want to offload bulk drafts, rewrites, summaries, review loops, or intermediate code passes without paying per call.
+- You are okay with using hosted models only for the truly important moments.
 
 ## Best local model picks
 - Automatic default: `auto`

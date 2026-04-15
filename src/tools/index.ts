@@ -14,6 +14,7 @@ export { FileTool } from "./file.js";
 export { EvalTool } from "./eval.js";
 export { PromptfooTool } from "./promptfoo.js";
 export { DspyTool } from "./dspy.js";
+export { WebTool } from "./web.js";
 
 import { DspyTool } from "./dspy.js";
 import { EvalTool } from "./eval.js";
@@ -21,6 +22,7 @@ import { FileTool } from "./file.js";
 import { GitHubTool } from "./github.js";
 import { PromptfooTool } from "./promptfoo.js";
 import { ShellTool } from "./shell.js";
+import { WebTool } from "./web.js";
 
 /** Create a registry of all built-in tools */
 export function createToolRegistry(): Map<string, ToolAdapter> {
@@ -31,5 +33,6 @@ export function createToolRegistry(): Map<string, ToolAdapter> {
   registry.set("eval", new EvalTool());
   registry.set("promptfoo", new PromptfooTool());
   registry.set("dspy", new DspyTool());
+  registry.set("web", new WebTool());
   return registry;
 }

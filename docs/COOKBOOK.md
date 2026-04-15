@@ -168,7 +168,24 @@ npx claudeflow run pipelines/research-topic.yaml \
   --verbose
 ```
 
-Pipeline does: search → find resources → compare approaches → write structured report.
+Pipeline does: built-in web search → fetch source pages → compare approaches → write structured report.
+
+No manual shell setup is required. The built-in `web` tool returns:
+- search results with titles, snippets, and links
+- fetched page text for the top sources
+- a `links` array you can carry into the final report
+
+Tool step used in YAML:
+
+```yaml
+- id: gather-sources
+  tool: web
+  action: research
+  params:
+    query: "{topic}"
+    topK: 6
+    fetchTopK: 4
+```
 
 Output is a trace you can share with your team: "here's what I found and how."
 

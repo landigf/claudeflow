@@ -18,6 +18,7 @@ export {
   EvalTool,
   PromptfooTool,
   DspyTool,
+  WebTool,
 } from "./tools/index.js";
 export type { ToolAdapter } from "./tools/index.js";
 

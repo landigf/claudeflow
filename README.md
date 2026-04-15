@@ -95,6 +95,31 @@ const result = await loadYaml("investigate-bug.yaml").run(
 );
 ```
 
+## Built-in tools
+
+ClaudeFlow ships with deterministic adapters you can call from YAML or TypeScript tool nodes:
+
+- `file` — read, write, list files
+- `shell` — run local commands
+- `github` — search issues and GitHub metadata through `gh`
+- `eval` — run a command and extract a metric
+- `promptfoo` and `dspy` — evaluation / prompt tooling
+- `web` — search the web, fetch source pages, and return links plus extracted text
+
+Example web research step:
+
+```yaml
+- id: gather-sources
+  tool: web
+  action: research
+  params:
+    query: "{topic}"
+    topK: 6
+    fetchTopK: 4
+```
+
+The built-in `web` tool returns source links in `links` and fetched source material in `sources`, so later steps can cite what they used instead of inventing URLs.
+
 ## Team Kit
 
 ClaudeFlow can also scaffold a repo-native collaboration kit for teammates using Claude, Codex, and Copilot.
@@ -335,4 +360,10 @@ Recommended runtime path:
 - `local`: ollama / auto
 
 Teammates should start with `cheap` unless the task clearly needs deeper reasoning or a private local run.
+
+Hackathon operating mode:
+- Use local Ollama aggressively for bulk drafting, review loops, summaries, rewrites, and intermediate code passes.
+- Use Gemini as the main hosted path for most structured requests.
+- Use OpenAI only when you want important research or a serious second opinion.
+- Use Claude for interactive coding, final review, and final verification runs.
 <!-- claudeflow-teamkit-readme:end -->

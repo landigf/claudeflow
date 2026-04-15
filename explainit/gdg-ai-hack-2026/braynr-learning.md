@@ -19,7 +19,7 @@ Use this track if your product improves how someone learns, gets feedback, studi
 - Google/Gemini can help with hosted reasoning, multimodal analysis, or document understanding.
 - ElevenLabs fits well if voice tutoring or spoken feedback is central.
 - GitHub Education and Replit help if the demo includes classroom or student developer workflows.
-- Use `cheap` (gpt-5-mini) for ideation and drafting, and `deep` for final critique.
+- Use `cheap` (gemini-2.5-flash-lite) for ideation and drafting, and `deep` for final critique.
 
 ## What to avoid
 - A generic tutor with no real wedge
