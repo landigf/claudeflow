@@ -13,6 +13,7 @@ import { analyze, formatAnalysis } from "./analyzer/index.js";
 import { loadYaml } from "./loader/yaml.js";
 import { CheckpointManager } from "./memory/checkpoint.js";
 import { MemoryStore } from "./memory/store.js";
+import { createTraceFileName } from "./observability/trace-file.js";
 import { type RuntimeProvider, createRuntime } from "./runtime/factory.js";
 import {
   doctorTeamKit,
@@ -176,7 +177,7 @@ switch (command) {
     const result = await p.run(input, { runtime, verbose, memory, checkpoint, tools });
 
     // Save trace
-    const traceName = `${p.name}-${new Date().toISOString().slice(0, 19).replace(/:/g, "-")}.json`;
+    const traceName = createTraceFileName(p.name);
     const tracePath = path.join(tracesDir, traceName);
     writeFileSync(
       tracePath,
